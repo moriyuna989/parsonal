@@ -3,6 +3,15 @@
 // 対局エントリーポイント・イベントバインド・キーボード操作
 // =====================================================================
 
+function handlePlayerDiscard(tileCode, viaRiichi) {
+  if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline() && typeof OnlinePeer !== 'undefined' && !OnlinePeer.isHost()) {
+    OnlineGame.sendGuestDiscard(tileCode, viaRiichi);
+  } else {
+    afterUserDiscard(tileCode, viaRiichi);
+  }
+}
+window.handlePlayerDiscard = handlePlayerDiscard;
+
 function wireEvents() {
   var root = document.getElementById('tgRoot');
   if (!root) return;
@@ -68,7 +77,7 @@ function wireEvents() {
 
   if (G.players.you.riichi) {
     var forced = document.getElementById('btnForcedDiscard');
-    if (forced) forced.addEventListener('click', function () { afterUserDiscard(G.lastDrawn, false); });
+    if (forced) forced.addEventListener('click', function () { handlePlayerDiscard(G.lastDrawn, false); });
   } else {
     root.querySelectorAll('.hand-row .tile:not(.disabled)').forEach(function (el) {
       el.addEventListener('click', function () {
@@ -77,7 +86,7 @@ function wireEvents() {
         var now = Date.now();
         if (G.lastTileClick && G.lastTileClick.idx === idx && (now - G.lastTileClick.time) < 400) {
           G.lastTileClick = null;
-          afterUserDiscard(code, false);
+          handlePlayerDiscard(code, false);
           return;
         }
         G.lastTileClick = { code: code, idx: idx, time: now };
@@ -92,9 +101,9 @@ function wireEvents() {
       });
     });
     var discardBtn = document.getElementById('btnDiscard');
-    if (discardBtn) discardBtn.addEventListener('click', function () { afterUserDiscard(G.selected, false); });
+    if (discardBtn) discardBtn.addEventListener('click', function () { handlePlayerDiscard(G.selected, false); });
     var riichiBtn = document.getElementById('btnRiichi');
-    if (riichiBtn) riichiBtn.addEventListener('click', function () { afterUserDiscard(G.selected, true); });
+    if (riichiBtn) riichiBtn.addEventListener('click', function () { handlePlayerDiscard(G.selected, true); });
     var cancelBtn = document.getElementById('btnCancel');
     if (cancelBtn) cancelBtn.addEventListener('click', function () { G.selected = null; G.selectedIndex = null; render(); });
   }
@@ -253,7 +262,7 @@ function handleKeyDown(e) {
       e.preventDefault();
       // 現在選択されている牌がリーチ可能牌なら、そのままリーチ宣言して切る
       if (G.selected && opts.tenpaiIfDiscard[G.selected]) {
-        afterUserDiscard(G.selected, true);
+        handlePlayerDiscard(G.selected, true);
         return;
       }
       // 未選択または非リーチ牌が選ばれている場合、リーチ可能牌を自動選択
@@ -313,10 +322,10 @@ function handleKeyDown(e) {
   } else if (e.key === ' ' || e.code === 'Space') {
     e.preventDefault();
     if (G.players.you.riichi) {
-      afterUserDiscard(G.lastDrawn, false);
+      handlePlayerDiscard(G.lastDrawn, false);
     } else if (G.selectedIndex !== null && G.selectedIndex !== undefined && G.selectedIndex >= 0 && G.selectedIndex < tiles.length) {
       var targetTile = tiles[G.selectedIndex];
-      afterUserDiscard(targetTile, false);
+      handlePlayerDiscard(targetTile, false);
     }
   }
 }
@@ -325,15 +334,17 @@ window.handleKeyDown = handleKeyDown;
 function initTraining(mode, match) {
   gameMode = mode || 'training';
   isPractice = (gameMode === 'practice');
-  if (isPractice && !match) {
-    match = {
+  if (isPractice) {
+    var defaultMatch = {
       rounds: 4, redDora: true, kyokuIndex: 1, maxKyoku: 4,
       roundName: '東風戦', kyokuWind: '東', kyokuNum: 1, honba: 0, riichiPool: 0,
       scores: { you: 25000, p2: 25000, p3: 25000, p4: 25000 }, dealerSeat: 'you',
       cpuLevel: 'hard'
     };
+    matchState = Object.assign({}, defaultMatch, match || {});
+  } else {
+    matchState = match || null;
   }
-  matchState = match || null;
   allowDamaten = true;
   G = null;
 

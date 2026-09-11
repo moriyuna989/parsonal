@@ -5,14 +5,17 @@
 
 var OnlineGame = (function () {
   var isOnline = false;
-  var mySeat = 'you'; // 'you' (ホスト), 'p2', 'p3', 'p4'
+  var myLogicalSeat = 'you'; // ホストは 'you'、ゲストは 'p2', 'p3', 'p4'
   var myName = 'プレイヤー';
+  var SEATS_ORDER = ['you', 'p2', 'p3', 'p4'];
+
   var seatsConfig = [
-    { seat: 'you', name: 'ホスト', id: null, isCpu: false },
+    { seat: 'you', name: 'ホスト（あなた）', id: null, isCpu: false },
     { seat: 'p2', name: 'CPU (下家)', id: null, isCpu: true },
     { seat: 'p3', name: 'CPU (対面)', id: null, isCpu: true },
     { seat: 'p4', name: 'CPU (上家)', id: null, isCpu: true }
   ];
+
   var matchSettings = {
     rounds: 4,
     redDora: true,
@@ -21,6 +24,100 @@ var OnlineGame = (function () {
 
   function getAppEl() {
     return document.getElementById('app');
+  }
+
+  // 論理席（ホスト基準） <-> ゲストのローカル席（常に'you'が手前）の相対変換
+  function logicalToLocalSeat(logicalSeat) {
+    if (OnlinePeer.isHost() || !myLogicalSeat) return logicalSeat;
+    var myIdx = SEATS_ORDER.indexOf(myLogicalSeat);
+    var logIdx = SEATS_ORDER.indexOf(logicalSeat);
+    if (myIdx === -1 || logIdx === -1) return logicalSeat;
+    var localIdx = (logIdx - myIdx + 4) % 4;
+    return SEATS_ORDER[localIdx];
+  }
+
+  function localToLogicalSeat(localSeat) {
+    if (OnlinePeer.isHost() || !myLogicalSeat) return localSeat;
+    var myIdx = SEATS_ORDER.indexOf(myLogicalSeat);
+    var locIdx = SEATS_ORDER.indexOf(localSeat);
+    if (myIdx === -1 || locIdx === -1) return localSeat;
+    var logIdx = (myIdx + locIdx) % 4;
+    return SEATS_ORDER[logIdx];
+  }
+
+  // 指定された論理席がゲスト（人間の参加者）かどうか判定（ホスト側用）
+  function isGuestSeat(logicalSeat) {
+    if (!OnlinePeer.isHost()) return false;
+    var slot = seatsConfig.find(function (s) { return s.seat === logicalSeat; });
+    return !!(slot && !slot.isCpu && slot.seat !== 'you');
+  }
+
+  // 画面UI表示用の席情報（ローカル席 'you', 'p2', 'p3', 'p4' を受け取って名前とタグ情報を返す）
+  function getSeatInfo(localSeat) {
+    if (!isOnline) {
+      return {
+        name: localSeat === 'you' ? 'あなた' : (SEAT_NAME[localSeat] || localSeat),
+        isCpu: (localSeat !== 'you'),
+        isYou: (localSeat === 'you'),
+        isHost: (localSeat === 'you'),
+        tagType: (localSeat === 'you') ? 'tag-me' : 'tag-cpu',
+        tagText: (localSeat === 'you') ? 'あなた' : 'CPU'
+      };
+    }
+
+    var logSeat = (!OnlinePeer.isHost()) ? localToLogicalSeat(localSeat) : localSeat;
+    var slot = seatsConfig.find(function (s) { return s.seat === logSeat; });
+    var isMe = (localSeat === 'you');
+    var isHostSlot = (logSeat === 'you');
+
+    if (!slot) {
+      return {
+        name: SEAT_NAME[localSeat] || localSeat,
+        isCpu: true,
+        isYou: isMe,
+        isHost: isHostSlot,
+        tagType: 'tag-cpu',
+        tagText: 'CPU'
+      };
+    }
+
+    if (isMe) {
+      return {
+        name: 'あなた',
+        isCpu: false,
+        isYou: true,
+        isHost: isHostSlot,
+        tagType: 'tag-me',
+        tagText: isHostSlot ? 'あなた (ホスト)' : 'あなた'
+      };
+    }
+
+    if (slot.isCpu) {
+      return {
+        name: slot.name,
+        isCpu: true,
+        isYou: false,
+        isHost: false,
+        tagType: 'tag-cpu',
+        tagText: 'CPU'
+      };
+    }
+
+    return {
+      name: slot.name,
+      isCpu: false,
+      isYou: false,
+      isHost: isHostSlot,
+      tagType: isHostSlot ? 'tag-host' : 'tag-human',
+      tagText: isHostSlot ? '対戦相手 (ホスト)' : '対戦相手'
+    };
+  }
+
+  // 論理席から表示名を取得（ログ等用）
+  function getSeatDisplayName(logicalSeat) {
+    var slot = seatsConfig.find(function (s) { return s.seat === logicalSeat; });
+    if (slot) return slot.name;
+    return SEAT_NAME[logicalSeat] || logicalSeat;
   }
 
   // オンラインモード開始（ロビー画面を表示）
@@ -68,7 +165,7 @@ var OnlineGame = (function () {
     if (status) status.innerText = '部屋を作成中…通信を初期化しています';
 
     OnlinePeer.createRoom(null, function (code) {
-      mySeat = 'you';
+      myLogicalSeat = 'you';
       myName = 'ホスト（あなた）';
       seatsConfig = [
         { seat: 'you', name: 'あなた (ホスト)', id: OnlinePeer.getMyId(), isCpu: false },
@@ -110,23 +207,20 @@ var OnlineGame = (function () {
   function setupHostPeerListeners() {
     OnlinePeer.onMessage(function (msg, senderId) {
       if (msg.type === 'REQ_JOIN') {
-        // 空いている席を探して割り当てる
         var emptySlot = seatsConfig.find(function (s) { return s.seat !== 'you' && s.isCpu; });
         if (emptySlot) {
           emptySlot.isCpu = false;
           emptySlot.id = senderId;
-          emptySlot.name = 'プレイヤー (' + emptySlot.seat.toUpperCase() + ')';
+          var seatKanjis = { p2: '南家', p3: '西家', p4: '北家' };
+          emptySlot.name = '対戦相手 (' + (seatKanjis[emptySlot.seat] || emptySlot.seat.toUpperCase()) + ')';
         }
-        // 全員にロビー状態をブロードキャスト
         broadcastLobbyState();
         renderLobby();
       } else if (msg.type === 'GUEST_DISCARD') {
         // ゲストからの打牌を受信
-        if (msg.seat === G.currentTurnSeat) {
-          executeOnlineDiscard(msg.seat, msg.tile, msg.riichi);
+        if (typeof executeOnlineGuestDiscard === 'function') {
+          executeOnlineGuestDiscard(msg.seat, msg.tile, msg.riichi);
         }
-      } else if (msg.type === 'GUEST_CALL_DECISION') {
-        handleOnlineCallDecision(msg.seat, msg.decision);
       }
     });
 
@@ -135,7 +229,8 @@ var OnlineGame = (function () {
       if (slot) {
         slot.isCpu = true;
         slot.id = null;
-        slot.name = 'CPU (' + slot.seat.toUpperCase() + ')';
+        var seatKanjis = { p2: '南家', p3: '西家', p4: '北家' };
+        slot.name = 'CPU (' + (seatKanjis[slot.seat] || slot.seat.toUpperCase()) + ')';
         broadcastLobbyState();
         renderLobby();
       }
@@ -149,10 +244,12 @@ var OnlineGame = (function () {
         seatsConfig = msg.seatsConfig;
         matchSettings = msg.matchSettings;
         var mySlot = seatsConfig.find(function (s) { return s.id === OnlinePeer.getMyId(); });
-        if (mySlot) mySeat = mySlot.seat;
+        if (mySlot) myLogicalSeat = mySlot.seat;
         renderLobby();
       } else if (msg.type === 'ONLINE_START_MATCH') {
         handleGuestStartMatch(msg);
+      } else if (msg.type === 'ONLINE_YOUR_TURN') {
+        handleGuestYourTurn(msg);
       } else if (msg.type === 'ONLINE_SYNC_TURN') {
         handleGuestSyncTurn(msg);
       } else if (msg.type === 'ONLINE_ROUND_OVER') {
@@ -179,7 +276,7 @@ var OnlineGame = (function () {
     var code = OnlinePeer.getRoomCode();
 
     var slotsHtml = seatsConfig.map(function (s) {
-      var isMe = (s.seat === mySeat);
+      var isMe = (s.seat === myLogicalSeat);
       var tagHtml = s.seat === 'you'
         ? '<span class="online-player-tag host">ホスト</span>'
         : (s.isCpu ? '<span class="online-player-tag cpu">CPU</span>' : '<span class="online-player-tag you">参加中</span>');
@@ -286,7 +383,7 @@ var OnlineGame = (function () {
 
     initTraining('practice', match);
 
-    // 各ゲストへ対局開始通知（自分の手牌のみ安全に配信）
+    // 各ゲストへ対局開始通知（配牌を安全に配信）
     seatsConfig.forEach(function (slot) {
       if (slot.seat !== 'you' && !slot.isCpu && slot.id) {
         OnlinePeer.sendTo(slot.id, {
@@ -311,74 +408,139 @@ var OnlineGame = (function () {
     app.innerHTML = shellHtml('ONLINE MATCH', '通信対戦（実践編）', 'tgRoot');
     wireBack();
 
-    mySeat = msg.seat;
+    myLogicalSeat = msg.seat;
     matchState = msg.matchState;
     gameMode = 'practice';
     isPractice = true;
     seatsConfig = msg.seatsConfig;
 
+    var localCurrentTurn = logicalToLocalSeat(msg.currentTurnSeat);
+    var localDealerSeat = logicalToLocalSeat(msg.dealerSeat);
+
+    // 相対座席に基づく自風計算
+    var seatWinds = {};
+    SEATS_ORDER.forEach(function (locSeat) {
+      var logSeat = localToLogicalSeat(locSeat);
+      var dIdx = SEATS_ORDER.indexOf(msg.dealerSeat);
+      var lIdx = SEATS_ORDER.indexOf(logSeat);
+      var wIdx = (lIdx - dIdx + 4) % 4;
+      var winds = ['東', '南', '西', '北'];
+      seatWinds[locSeat] = winds[wIdx];
+    });
+
+    // ゲスト視点では、手前（you）に自分の手牌を配置
     G = {
       pool: new Array(34).fill(0),
       players: {
-        you: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, melds: [] },
+        you: { hand: msg.hand || [], river: [], isTenpai: false, wait: [], riichi: false, melds: [] },
         p2: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, melds: [] },
         p3: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, melds: [] },
         p4: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, melds: [] }
       },
       doraIndicator: msg.doraIndicator,
       doraIndicators: [msg.doraIndicator],
-      currentTurnSeat: msg.currentTurnSeat,
-      dealerSeat: msg.dealerSeat,
-      seatWind: { you: '東', p2: '南', p3: '西', p4: '北' },
+      currentTurnSeat: localCurrentTurn,
+      dealerSeat: localDealerSeat,
+      seatWind: seatWinds,
       kyokuWind: msg.matchState.kyokuWind,
       kyokuNumber: msg.matchState.kyokuNum,
       honba: msg.matchState.honba,
-      log: ['オンライン対局を開始しました。あなたは ' + mySeat.toUpperCase() + ' 家です。'],
-      processing: (msg.currentTurnSeat !== mySeat),
+      log: ['オンライン対局を開始しました。あなたは ' + seatWinds.you + '家 です。'],
+      processing: (localCurrentTurn !== 'you'),
       gameOver: false,
       outcome: null,
-      justDrew: (msg.currentTurnSeat === mySeat)
+      justDrew: (localCurrentTurn === 'you'),
+      lastDrawn: null
     };
-    G.players[mySeat].hand = msg.hand;
 
     render();
   }
 
-  // ホストが打牌を処理し、全員に同期する
-  function executeOnlineDiscard(seat, tileCode, viaRiichi) {
-    afterUserDiscard(tileCode, viaRiichi);
+  // ホスト側：ゲストのツモ番になったことを該当ゲストへ通知
+  function notifyGuestTurn(logicalSeat, drawTile) {
+    if (!OnlinePeer.isHost() || !G) return;
+    var slot = seatsConfig.find(function (s) { return s.seat === logicalSeat; });
+    if (!slot || !slot.id) return;
+
+    OnlinePeer.sendTo(slot.id, {
+      type: 'ONLINE_YOUR_TURN',
+      draw: drawTile,
+      doraIndicators: G.doraIndicators,
+      remainingPool: poolTotal(G.pool)
+    });
+
+    // 他のゲストにもターンの移行と最新卓状態を通知
     syncOnlineStateToAll();
   }
 
-  // 状態の同期ブロードキャスト
+  // ゲスト側：ホストからツモ番通知を受け取った時の処理
+  function handleGuestYourTurn(msg) {
+    if (!G) return;
+    G.currentTurnSeat = 'you';
+    if (msg.draw) {
+      G.players.you.hand.push(msg.draw);
+      G.lastDrawn = msg.draw;
+      G.justDrew = true;
+      G.log.push('あなたのツモ番です: ' + tileName(msg.draw) + ' をツモりました。');
+    }
+    G.processing = false;
+    if (msg.doraIndicators) G.doraIndicators = msg.doraIndicators;
+    render();
+  }
+
+  // ゲスト側：牌を切ってホストへ送信
+  function sendGuestDiscard(tileCode, viaRiichi) {
+    if (!G || G.currentTurnSeat !== 'you') return;
+    var idx = G.players.you.hand.indexOf(tileCode);
+    if (idx !== -1) {
+      G.players.you.hand.splice(idx, 1);
+    }
+    G.players.you.river.push(tileCode);
+    G.lastDiscardSeat = 'you';
+    G.selected = null;
+    G.selectedIndex = null;
+    G.justDrew = false;
+    G.processing = true; // 打牌後はホストの同期を待つ
+    if (viaRiichi) {
+      G.players.you.riichi = true;
+      G.players.you.riichiTurn = G.players.you.river.length;
+      G.players.you.ippatsu = true;
+    }
+    G.log.push('あなたが' + tileName(tileCode) + 'を切りました。' + (viaRiichi ? '（リーチ宣言）' : ''));
+    render();
+
+    OnlinePeer.sendToHost({
+      type: 'GUEST_DISCARD',
+      seat: myLogicalSeat,
+      tile: tileCode,
+      riichi: viaRiichi
+    });
+  }
+
+  // ホスト側：状態の同期ブロードキャスト
   function syncOnlineStateToAll() {
     if (!OnlinePeer.isHost() || !G) return;
+
+    var rivers = {};
+    var melds = {};
+    var riichiStates = {};
+    SEATS_ORDER.forEach(function (s) {
+      if (G.players[s]) {
+        rivers[s] = G.players[s].river;
+        melds[s] = G.players[s].melds;
+        riichiStates[s] = G.players[s].riichi;
+      }
+    });
 
     seatsConfig.forEach(function (slot) {
       if (slot.seat !== 'you' && !slot.isCpu && slot.id) {
         OnlinePeer.sendTo(slot.id, {
           type: 'ONLINE_SYNC_TURN',
           currentTurnSeat: G.currentTurnSeat,
-          rivers: {
-            you: G.players.you.river,
-            p2: G.players.p2.river,
-            p3: G.players.p3.river,
-            p4: G.players.p4.river
-          },
-          melds: {
-            you: G.players.you.melds,
-            p2: G.players.p2.melds,
-            p3: G.players.p3.melds,
-            p4: G.players.p4.melds
-          },
-          riichiStates: {
-            you: G.players.you.riichi,
-            p2: G.players.p2.riichi,
-            p3: G.players.p3.riichi,
-            p4: G.players.p4.riichi
-          },
+          rivers: rivers,
+          melds: melds,
+          riichiStates: riichiStates,
           lastDiscardSeat: G.lastDiscardSeat,
-          lastTile: G.players[G.lastDiscardSeat] ? G.players[G.lastDiscardSeat].river.slice(-1)[0] : null,
           doraIndicators: G.doraIndicators,
           remainingPool: poolTotal(G.pool),
           scores: matchState ? matchState.scores : null,
@@ -388,44 +550,91 @@ var OnlineGame = (function () {
     });
   }
 
+  // ゲスト側：ホストからの卓同期受信
   function handleGuestSyncTurn(msg) {
     if (!G) return;
-    G.currentTurnSeat = msg.currentTurnSeat;
+    var localCurrentTurn = logicalToLocalSeat(msg.currentTurnSeat);
+    G.currentTurnSeat = localCurrentTurn;
     G.doraIndicators = msg.doraIndicators;
-    G.lastDiscardSeat = msg.lastDiscardSeat;
-    SEATS.forEach(function (s) {
-      if (G.players[s]) {
-        G.players[s].river = msg.rivers[s] || [];
-        G.players[s].melds = msg.melds[s] || [];
-        G.players[s].riichi = msg.riichiStates[s] || false;
+    G.lastDiscardSeat = logicalToLocalSeat(msg.lastDiscardSeat);
+
+    SEATS_ORDER.forEach(function (locSeat) {
+      var logSeat = localToLogicalSeat(locSeat);
+      if (G.players[locSeat]) {
+        G.players[locSeat].river = (msg.rivers && msg.rivers[logSeat]) ? msg.rivers[logSeat].slice() : [];
+        G.players[locSeat].melds = (msg.melds && msg.melds[logSeat]) ? msg.melds[logSeat].slice() : [];
+        G.players[locSeat].riichi = (msg.riichiStates && msg.riichiStates[logSeat]) || false;
       }
-      if (matchState && msg.scores) {
-        matchState.scores[s] = msg.scores[s];
+      if (matchState && msg.scores && msg.scores[logSeat] !== undefined) {
+        matchState.scores[locSeat] = msg.scores[logSeat];
       }
     });
-    if (matchState) matchState.riichiPool = msg.riichiPool;
+    if (matchState && msg.riichiPool !== undefined) {
+      matchState.riichiPool = msg.riichiPool;
+    }
 
-    G.processing = (G.currentTurnSeat !== mySeat);
+    G.processing = (localCurrentTurn !== 'you');
     render();
   }
 
+  // ホスト側：局終了の同期送信
+  function syncRoundOver() {
+    if (!OnlinePeer.isHost() || !G) return;
+    var allHands = {};
+    SEATS_ORDER.forEach(function (s) {
+      allHands[s] = G.players[s] ? G.players[s].hand.slice() : [];
+    });
+    seatsConfig.forEach(function (slot) {
+      if (slot.seat !== 'you' && !slot.isCpu && slot.id) {
+        OnlinePeer.sendTo(slot.id, {
+          type: 'ONLINE_ROUND_OVER',
+          outcome: G.outcome,
+          allHands: allHands,
+          scores: matchState ? matchState.scores : null,
+          riichiPool: matchState ? matchState.riichiPool : 0
+        });
+      }
+    });
+  }
+
+  // ゲスト側：局終了通知を受信した時の処理
   function handleGuestRoundOver(msg) {
     if (!G) return;
     G.gameOver = true;
     G.outcome = msg.outcome;
-    SEATS.forEach(function (s) {
-      if (G.players[s] && msg.allHands && msg.allHands[s]) {
-        G.players[s].hand = msg.allHands[s];
+    if (G.outcome) {
+      if (G.outcome.seat) G.outcome.seat = logicalToLocalSeat(G.outcome.seat);
+      if (G.outcome.winnerSeat) G.outcome.winnerSeat = logicalToLocalSeat(G.outcome.winnerSeat);
+      if (G.outcome.ronSeat) G.outcome.ronSeat = logicalToLocalSeat(G.outcome.ronSeat);
+      if (G.outcome.to) G.outcome.to = logicalToLocalSeat(G.outcome.to);
+      if (G.outcome.via) G.outcome.via = logicalToLocalSeat(G.outcome.via);
+      if (G.outcome.ronner) G.outcome.ronner = logicalToLocalSeat(G.outcome.ronner);
+      if (G.outcome.discarder) G.outcome.discarder = logicalToLocalSeat(G.outcome.discarder);
+    }
+    SEATS_ORDER.forEach(function (locSeat) {
+      var logSeat = localToLogicalSeat(locSeat);
+      if (G.players[locSeat] && msg.allHands && msg.allHands[logSeat]) {
+        G.players[locSeat].hand = msg.allHands[logSeat];
+      }
+      if (matchState && msg.scores && msg.scores[logSeat] !== undefined) {
+        matchState.scores[locSeat] = msg.scores[logSeat];
       }
     });
+    G.processing = false;
     render();
   }
 
   return {
     openOnlineLobby: openOnlineLobby,
     isOnline: function () { return isOnline; },
-    getMySeat: function () { return mySeat; },
-    syncOnlineStateToAll: syncOnlineStateToAll
+    getMyLogicalSeat: function () { return myLogicalSeat; },
+    isGuestSeat: isGuestSeat,
+    getSeatInfo: getSeatInfo,
+    getSeatDisplayName: getSeatDisplayName,
+    notifyGuestTurn: notifyGuestTurn,
+    sendGuestDiscard: sendGuestDiscard,
+    syncOnlineStateToAll: syncOnlineStateToAll,
+    syncRoundOver: syncRoundOver
   };
 })();
 

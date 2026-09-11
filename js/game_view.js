@@ -44,7 +44,11 @@ function oppBlockHtml(seat) {
   var meldsHtml = (p.melds && p.melds.length)
     ? '<div class="opp-melds">' + renderMeldsHtml(p.melds, seat, 'compact') + '</div>'
     : '';
-  return '<div class="opp-block' + (isWinnerBlock(seat) ? ' winner-block' : '') + '"><div class="opp-head"><span class="opp-name">' + SEAT_NAME[seat] + '</span>' + scoreTag + badges + meldsHtml + '</div>' + riverHtml(seat) + '</div>';
+
+  var info = (typeof OnlineGame !== 'undefined') ? OnlineGame.getSeatInfo(seat) : { name: SEAT_NAME[seat], tagType: 'tag-cpu', tagText: 'CPU' };
+  var tagBadge = '<span class="player-identity-tag ' + info.tagType + '">' + info.tagText + '</span>';
+
+  return '<div class="opp-block' + (isWinnerBlock(seat) ? ' winner-block' : '') + '"><div class="opp-head"><span class="opp-name">' + info.name + '</span>' + tagBadge + scoreTag + badges + meldsHtml + '</div>' + riverHtml(seat) + '</div>';
 }
 
 function youMiniHtml() {
@@ -58,7 +62,11 @@ function youMiniHtml() {
   }
   badges += winnerBadgeHtml('you');
   var scoreTag = matchState ? '<span class="seat-score-tag">' + matchState.scores.you.toLocaleString() + '点</span>' : '';
-  return '<div class="opp-block' + (isWinnerBlock('you') ? ' winner-block' : '') + '"><div class="opp-head"><span class="opp-name">あなた</span>' + scoreTag + badges + '</div>' + riverHtml('you') + '</div>';
+
+  var info = (typeof OnlineGame !== 'undefined') ? OnlineGame.getSeatInfo('you') : { name: 'あなた', tagType: 'tag-me', tagText: 'あなた' };
+  var tagBadge = '<span class="player-identity-tag ' + info.tagType + '">' + info.tagText + '</span>';
+
+  return '<div class="opp-block' + (isWinnerBlock('you') ? ' winner-block' : '') + '"><div class="opp-head"><span class="opp-name">' + info.name + '</span>' + tagBadge + scoreTag + badges + '</div>' + riverHtml('you') + '</div>';
 }
 
 function wallVisualHtml() {
@@ -241,7 +249,8 @@ function allHandsHtml() {
 
   return ['you', 'p2', 'p3', 'p4'].map(function (seat) {
     var p = G.players[seat];
-    var label = seat === 'you' ? 'あなた' : SEAT_NAME[seat];
+    var info = (typeof OnlineGame !== 'undefined') ? OnlineGame.getSeatInfo(seat) : { name: (seat === 'you' ? 'あなた' : SEAT_NAME[seat]), tagType: (seat === 'you' ? 'tag-me' : 'tag-cpu'), tagText: (seat === 'you' ? 'あなた' : 'CPU') };
+    var label = info.name + ' <span class="player-identity-tag ' + info.tagType + '">' + info.tagText + '</span>';
     var isWinner = hl.winnerSeat === seat;
     var winBadge = isWinner ? '<span class="badge-wintype ' + (hl.winType === 'tsumo' ? 'tsumo' : 'ron') + '">' + (hl.winType === 'tsumo' ? 'ツモ' : 'ロン') + '</span>' : '';
 
@@ -347,20 +356,25 @@ function revealHtml() {
   if (isPractice && matchState) {
     settleScores(o);
   }
+  var getSeatLabel = function (s) {
+    if (!s) return '';
+    if (typeof OnlineGame !== 'undefined') return OnlineGame.getSeatInfo(s).name;
+    return s === 'you' ? 'あなた' : (SEAT_NAME[s] || s);
+  };
   var cls = 'neutral', headline = '', winBadge = '', body = '';
   if (o.type === 'user_dealin') {
     cls = 'bad'; winBadge = 'ロン';
-    headline = '放銃… ' + SEAT_NAME[o.to] + 'に振り込みました';
+    headline = '放銃… ' + getSeatLabel(o.to) + 'に振り込みました';
     var isWinnerRiichi = G.players[o.to] ? G.players[o.to].riichi : false;
     body = '<div class="footnote">切った牌: ' + tileName(o.tile) + '</div>' + scoreBlockHtml(o.score, isWinnerRiichi) + allHandsHtml();
   } else if (o.type === 'opp_tsumo') {
     cls = 'bad'; winBadge = 'ツモ';
-    headline = SEAT_NAME[o.seat] + 'がツモあがりしました';
+    headline = getSeatLabel(o.seat) + 'がツモあがりしました';
     var isWinnerRiichi = G.players[o.seat] ? G.players[o.seat].riichi : false;
     body = '<div class="footnote">ツモ牌: ' + tileName(o.tile) + '</div>' + scoreBlockHtml(o.score, isWinnerRiichi) + allHandsHtml();
   } else if (o.type === 'other_ron') {
     cls = 'neutral'; winBadge = 'ロン';
-    headline = SEAT_NAME[o.ronner] + 'が' + SEAT_NAME[o.discarder] + 'から' + tileName(o.tile) + 'でロンしました';
+    headline = getSeatLabel(o.ronner) + 'が' + getSeatLabel(o.discarder) + 'から' + tileName(o.tile) + 'でロンしました';
     var isWinnerRiichi = G.players[o.ronner] ? G.players[o.ronner].riichi : false;
     body = '<div class="footnote">あなたは直接関係していません。</div>' + scoreBlockHtml(o.score, isWinnerRiichi) + allHandsHtml();
   } else if (o.type === 'ryuukyoku') {
@@ -369,7 +383,7 @@ function revealHtml() {
     body = '<div class="footnote">山の牌がなくなりました。全員の手牌と聴牌状況を確認しましょう。</div>' + allHandsHtml();
   } else if (o.type === 'user_ron') {
     cls = 'good'; winBadge = 'ロン';
-    headline = 'あがり！ ' + SEAT_NAME[o.via] + 'から' + tileName(o.tile) + 'でロン';
+    headline = 'あがり！ ' + getSeatLabel(o.via) + 'から' + tileName(o.tile) + 'でロン';
     body = scoreBlockHtml(o.score, G.players.you.riichi) + allHandsHtml();
   } else if (o.type === 'user_tsumo') {
     cls = 'good'; winBadge = 'ツモ';

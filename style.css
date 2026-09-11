@@ -1036,5 +1036,39 @@
     box-shadow: 0 0 6px #38a169;
   }
 
+  /* 対局画面用 プレイヤー識別タグ */
+  .player-identity-tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+  }
+  .player-identity-tag.tag-human {
+    background: #38a169;
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(56, 161, 105, 0.3);
+  }
+  .player-identity-tag.tag-host {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(43, 114, 186, 0.3);
+  }
+  .player-identity-tag.tag-cpu {
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+  }
+  .player-identity-tag.tag-me {
+    background: linear-gradient(135deg, #ff5c96 0%, #ff896b 100%);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(255, 92, 150, 0.3);
+  }
+
+
 
 

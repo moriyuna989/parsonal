@@ -91,6 +91,9 @@ function afterUserDiscard(tileCode, viaRiichi) {
     var ronScore = G.players[ron].tpl ? scoreTemplateWin(ron, false, tileCode) : scorePlayerWin(ron, G.players[ron].hand.concat([tileCode]), tileCode, false);
     G.outcome = { type: 'user_dealin', to: ron, tile: tileCode, score: ronScore };
     render();
+    if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+      OnlineGame.syncRoundOver();
+    }
     return;
   }
   G.players.you.wait = findWaitsOpen(G.players.you.hand, G.players.you.melds.length);
@@ -99,12 +102,92 @@ function afterUserDiscard(tileCode, viaRiichi) {
     G.currentTurnSeat = nextSeat('you');
     G.processing = true;
     render();
+    if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+      OnlineGame.syncOnlineStateToAll();
+    }
     setTimeout(advancePracticeTurn, 550);
   } else {
     runOpponentsSequence();
   }
 }
 window.afterUserDiscard = afterUserDiscard;
+
+// ホスト側：オンライン参加者（ゲスト）の打牌を受信して実行
+function executeOnlineGuestDiscard(seat, tileCode, viaRiichi) {
+  if (!G || G.gameOver) return;
+  var p = G.players[seat];
+  if (!p) return;
+  var idx = p.hand.indexOf(tileCode);
+  if (idx !== -1) {
+    p.hand.splice(idx, 1);
+  } else if (p.hand.length > 0) {
+    p.hand.pop();
+  }
+  p.river.push(tileCode);
+  G.lastDiscardSeat = seat;
+  G.justDrew = false;
+  if (viaRiichi) {
+    p.riichi = true;
+    p.riichiTurn = p.river.length;
+    p.ippatsu = true;
+    p.isTenpai = true;
+    if (isPractice && matchState) {
+      matchState.scores[seat] -= 1000;
+      matchState.riichiPool = (matchState.riichiPool || 0) + 1;
+    }
+  } else if (p.riichi) {
+    p.ippatsu = false;
+  }
+  var seatName = (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) ? OnlineGame.getSeatDisplayName(seat) : (SEAT_NAME[seat] || seat);
+  G.log.push(seatName + 'が' + tileName(tileCode) + 'を切りました。' + (viaRiichi ? '（リーチ宣言）' : ''));
+
+  var ron = checkRon(tileCode, seat);
+  if (ron) {
+    G.processing = false;
+    G.gameOver = true;
+    if (ron === 'you') {
+      G.outcome = {
+        type: 'user_ron',
+        via: seat,
+        tile: tileCode,
+        score: scorePlayerWin('you', G.players.you.hand.concat([tileCode]), tileCode, false)
+      };
+    } else {
+      G.outcome = {
+        type: 'other_ron',
+        ronner: ron,
+        discarder: seat,
+        tile: tileCode,
+        score: scorePlayerWin(ron, G.players[ron].hand.concat([tileCode]), tileCode, false)
+      };
+    }
+    render();
+    if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+      OnlineGame.syncRoundOver();
+    }
+    return;
+  }
+
+  render();
+  var callOpts = checkUserCallOptions(tileCode, seat);
+  if (callOpts.canPon || callOpts.chiOptions.length || callOpts.canKan) {
+    G.pendingCall = { tile: tileCode, fromSeat: seat, canPon: callOpts.canPon, canKan: callOpts.canKan, chiOptions: callOpts.chiOptions };
+    G.pendingCallIndex = null;
+    G.processing = false;
+    render();
+    if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+      OnlineGame.syncOnlineStateToAll();
+    }
+    return;
+  }
+
+  G.currentTurnSeat = nextSeat(seat);
+  if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+    OnlineGame.syncOnlineStateToAll();
+  }
+  setTimeout(advancePracticeTurn, 550);
+}
+window.executeOnlineGuestDiscard = executeOnlineGuestDiscard;
 
 function opponentTurn(seat) {
   if (poolTotal(G.pool) <= 0) return { type: 'ryuukyoku' };
@@ -149,13 +232,15 @@ function advancePracticeTurn() {
   var seat = G.currentTurnSeat;
   if (!seat || !G.players || !G.players[seat]) return;
 
-
   if (seat === 'you') {
     if (poolTotal(G.pool) <= 0) {
       G.processing = false;
       G.gameOver = true;
       G.outcome = { type: 'ryuukyoku' };
       render();
+      if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+        OnlineGame.syncRoundOver();
+      }
       return;
     }
     var draw = drawRandom(G.pool);
@@ -165,7 +250,34 @@ function advancePracticeTurn() {
     G.processing = false;
     G.log.push('あなたは ' + tileName(draw) + ' をツモりました。');
     render();
+    if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+      OnlineGame.syncOnlineStateToAll();
+    }
     return;
+  }
+
+  // オンライン対戦で人間のゲストプレイヤーのターンの場合
+  if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline() && OnlineGame.isGuestSeat(seat)) {
+    if (poolTotal(G.pool) <= 0) {
+      G.processing = false;
+      G.gameOver = true;
+      G.outcome = { type: 'ryuukyoku' };
+      render();
+      OnlineGame.syncRoundOver();
+      return;
+    }
+    var drawGuest = drawRandom(G.pool);
+    G.players[seat].hand.push(drawGuest);
+    G.lastDrawn = drawGuest;
+    G.justDrew = true;
+    G.processing = true; // ホスト側はゲストの打牌を待つ
+    var gName = OnlineGame.getSeatDisplayName(seat);
+    G.log.push(gName + 'のツモ番です。');
+    render();
+
+    // ゲストへ「あなたのターンです」を送信（ツモ牌を同封）
+    OnlineGame.notifyGuestTurn(seat, drawGuest);
+    return; // CPU打牌には進まずここで待機！
   }
 
   if (poolTotal(G.pool) <= 0) {
@@ -173,6 +285,9 @@ function advancePracticeTurn() {
     G.gameOver = true;
     G.outcome = { type: 'ryuukyoku' };
     render();
+    if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+      OnlineGame.syncRoundOver();
+    }
     return;
   }
 
@@ -187,6 +302,9 @@ function advancePracticeTurn() {
       G.gameOver = true;
       G.outcome = { type: 'opp_tsumo', seat: seat, tile: draw, score: winScore };
       render();
+      if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+        OnlineGame.syncRoundOver();
+      }
       return;
     }
   }
@@ -298,6 +416,9 @@ function advancePracticeTurn() {
       };
     }
     render();
+    if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+      OnlineGame.syncRoundOver();
+    }
     return;
   }
 
@@ -308,10 +429,16 @@ function advancePracticeTurn() {
     G.pendingCallIndex = null;
     G.processing = false;
     render();
+    if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+      OnlineGame.syncOnlineStateToAll();
+    }
     return;
   }
 
   G.currentTurnSeat = nextSeat(seat);
+  if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+    OnlineGame.syncOnlineStateToAll();
+  }
   setTimeout(advancePracticeTurn, 550);
 }
 window.advancePracticeTurn = advancePracticeTurn;
@@ -544,6 +671,9 @@ function executeCallPass() {
   G.pendingCallIndex = null;
   G.processing = true;
   render();
+  if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+    OnlineGame.syncOnlineStateToAll();
+  }
   if (isPractice) {
     G.currentTurnSeat = nextSeat(fromSeat);
     setTimeout(advancePracticeTurn, 400);
@@ -597,5 +727,8 @@ function userTsumo() {
   G.gameOver = true;
   G.outcome = { type: 'user_tsumo', tile: G.lastDrawn, score: scoreUserWin(G.players.you.hand, G.lastDrawn, true) };
   render();
+  if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+    OnlineGame.syncRoundOver();
+  }
 }
 window.userTsumo = userTsumo;
