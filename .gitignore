@@ -1,0 +1,9 @@
+# テスト・作業用スクリプト
+scratch/
+
+# OS一時ファイル
+Thumbs.db
+.DS_Store
+
+# Vercelメタデータ
+.vercel

@@ -1,0 +1,1040 @@
+  :root {
+    --bg: #fff6f9;
+    --bg-grid: #ffdcea;
+    --surface: #ffffff;
+    --surface-alt: #ffeef4;
+    --ink: #3a2436;
+    --ink-soft: #835e77;
+    --accent: #ff5c96;
+    --accent-strong: #ff3d80;
+    --accent-ink: #4a1030;
+    --line: #ffd6e4;
+    --good: #17805a;
+    --good-bg: #e3f7ee;
+    --bad: #d43868;
+    --bad-bg: #ffe3ea;
+    --tile-bg: #fffdfa;
+    --tile-line: #f0d2e0;
+    --shadow: 0 18px 40px -20px rgba(180, 40, 100, 0.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #2a1625;
+      --bg-grid: #341c2d;
+      --surface: #3a2032;
+      --surface-alt: #45253a;
+      --ink: #ffe9f2;
+      --ink-soft: #d6a8c2;
+      --accent: #ff7ab0;
+      --accent-strong: #ff95c2;
+      --accent-ink: #2a0f1e;
+      --line: #55304a;
+      --good: #5be0a8;
+      --good-bg: #1f4a3a;
+      --bad: #ff8fa8;
+      --bad-bg: #4a1f2c;
+      --tile-bg: #fdf6ef;
+      --tile-line: #d8c0a8;
+      --shadow: 0 20px 44px -18px rgba(0, 0, 0, 0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #2a1625;
+    --bg-grid: #341c2d;
+    --surface: #3a2032;
+    --surface-alt: #45253a;
+    --ink: #ffe9f2;
+    --ink-soft: #d6a8c2;
+    --accent: #ff7ab0;
+    --accent-strong: #ff95c2;
+    --accent-ink: #2a0f1e;
+    --line: #55304a;
+    --good: #5be0a8;
+    --good-bg: #1f4a3a;
+    --bad: #ff8fa8;
+    --bad-bg: #4a1f2c;
+    --tile-bg: #fdf6ef;
+    --tile-line: #d8c0a8;
+    --shadow: 0 20px 44px -18px rgba(0, 0, 0, 0.55);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle, var(--bg-grid) 1.6px, transparent 1.6px) 0 0/26px 26px,
+      var(--bg);
+    color: var(--ink);
+    font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium", "Yu Gothic", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 40px 24px 64px;
+  }
+
+  .stage {
+    width: 100%;
+    max-width: 980px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .topbar { display: flex; }
+  .back-link {
+    font-size: 13px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .back-link:hover { color: var(--accent-strong); }
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+  .masthead .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--ink-soft);
+  }
+  .masthead h1 {
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: 0.02em;
+  }
+
+  .progress {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+  }
+  .chip {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    transition: background 0.25s ease, border-color 0.25s ease;
+  }
+  .chip[data-state="current"] { background: var(--accent); border-color: var(--accent); opacity: 0.55; }
+  .chip[data-state="correct"] { background: var(--good); border-color: var(--good); }
+  .chip[data-state="wrong"] { background: var(--bad); border-color: var(--bad); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 30px 32px 28px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .qnum {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+    font-variant-numeric: tabular-nums;
+  }
+  .qnum-kyoku {
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0;
+  }
+
+  .situation { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pill {
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--surface-alt);
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+  }
+  .pill.strong { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+  .pill.riichi { color: var(--bad); background: var(--bad-bg); border-color: var(--bad); font-weight: 700; }
+  .pill.good { color: var(--good); background: var(--good-bg); border-color: var(--good); font-weight: 700; }
+  .pill.ippatsu { color: #b45309; background: #fef3c7; border-color: #f59e0b; font-weight: 700; }
+
+  .tiles-wrap { overflow-x: auto; padding: 4px 2px 8px; -webkit-overflow-scrolling: touch; }
+  .tiles-row { display: flex; align-items: flex-end; gap: 3px; width: max-content; }
+  .tile {
+    font-family: "Segoe UI Symbol", "Noto Sans Symbols2", "Apple Symbols", sans-serif;
+    font-size: 40px;
+    line-height: 1;
+    color: var(--ink);
+    background: var(--tile-bg);
+    border: 1px solid var(--tile-line);
+    border-radius: 5px;
+    padding: 2px 1px 4px;
+    box-shadow: 0 1px 0 var(--tile-line);
+  }
+  .tile.win, .tile.drawn {
+    margin-left: 12px;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent), 0 2px 6px -1px rgba(0,0,0,0.25);
+  }
+
+  .info-strip { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .indicator { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .indicator .tile { font-size: 28px; padding: 2px 3px 3px; }
+  .indicator .cap { font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+  .naki-note { font-size: 13px; color: var(--ink-soft); align-self: center; }
+
+  .input-row { display: flex; align-items: center; gap: 8px; }
+  .input-row.dual { gap: 6px; }
+  .connector { font-size: 20px; color: var(--ink-soft); padding: 0 2px; }
+  .tray {
+    flex: 1; display: flex; align-items: center;
+    background: var(--surface-alt); border: 1px solid var(--line); border-radius: 12px;
+    padding: 4px 6px 4px 16px; min-width: 0;
+  }
+  .tray .label { font-size: 12px; color: var(--ink-soft); white-space: nowrap; padding-right: 6px; }
+  .tray input {
+    flex: 1; width: 100%; min-width: 0; border: none; background: transparent; outline: none;
+    font-size: 22px; font-variant-numeric: tabular-nums; color: var(--ink); font-family: inherit; padding: 10px 0;
+  }
+  .tray input::placeholder { color: var(--ink-soft); opacity: 0.6; }
+  .tray .suffix { font-size: 14px; color: var(--ink-soft); padding: 0 8px 0 4px; white-space: nowrap; }
+
+  button { font-family: inherit; cursor: pointer; }
+  .btn-main {
+    border: none; border-radius: 999px; padding: 15px 24px; font-size: 16px; font-weight: 700;
+    background: var(--accent); color: var(--accent-ink);
+    box-shadow: 0 6px 14px -6px rgba(255, 92, 150, 0.55);
+    transition: transform 0.12s ease, background 0.2s ease, box-shadow 0.12s ease;
+  }
+  .btn-main:hover { background: var(--accent-strong); transform: translateY(-1px); box-shadow: 0 8px 18px -6px rgba(255, 92, 150, 0.6); }
+  .btn-main:active { transform: scale(0.98); }
+  .btn-main:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+
+  .btn-ghost2 {
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+    border-radius: 999px; padding: 12px 20px; font-size: 14px; font-weight: 600;
+  }
+  .btn-ghost2:hover { border-color: var(--accent); color: var(--accent-strong); }
+  .btn-danger { background: var(--bad); color: #fff; border: none; border-radius: 999px; padding: 12px 20px; font-weight: 700; }
+  .btn-danger:hover { opacity: 0.9; }
+
+  .feedback {
+    display: none; flex-direction: column; gap: 6px; border-radius: 12px; padding: 16px 18px;
+    font-size: 14px; line-height: 1.6;
+  }
+  .feedback.show { display: flex; }
+  .feedback.correct { background: var(--good-bg); color: var(--good); }
+  .feedback.wrong { background: var(--bad-bg); color: var(--bad); }
+  .feedback .headline { font-size: 17px; font-weight: 700; font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif; }
+  .feedback .detail { color: var(--ink); opacity: 0.9; font-variant-numeric: tabular-nums; }
+  .feedback .yaku { color: var(--ink); opacity: 0.75; font-size: 13px; }
+
+  .score-table-toggle { margin-top: 10px; }
+  .score-table-wrap { margin-top: 10px; flex-direction: column; gap: 14px; }
+  .score-table-block { display: flex; flex-direction: column; gap: 4px; }
+  .score-table-title {
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif;
+    font-size: 12px; font-weight: 700; color: var(--ink);
+  }
+  .score-table-scroll { overflow-x: auto; }
+  .score-table {
+    border-collapse: collapse; font-size: 11px; width: 100%; min-width: 360px;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .score-table th, .score-table td { border: 1px solid var(--line); padding: 4px 7px; text-align: center; white-space: nowrap; }
+  .score-table th { background: var(--surface-alt); color: var(--ink-soft); font-weight: 600; }
+  .score-table.mangan-table { min-width: 0; width: auto; }
+
+  .footnote { text-align: center; font-size: 12px; color: var(--ink-soft); line-height: 1.7; }
+
+  .result-score { text-align: center; display: flex; flex-direction: column; gap: 4px; }
+  .result-score .big { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif; font-size: 52px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .result-score .big small { font-size: 22px; color: var(--ink-soft); font-family: inherit; }
+  .result-score .label { font-size: 13px; color: var(--ink-soft); letter-spacing: 0.08em; }
+
+  .review-list { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .review-item { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; gap: 10px; }
+  .review-item .r-cond { color: var(--ink-soft); }
+  .review-item .r-mark { font-weight: 700; }
+  .review-item .r-mark.correct { color: var(--good); }
+  .review-item .r-mark.wrong { color: var(--bad); }
+  .review-item .r-ans { font-variant-numeric: tabular-nums; color: var(--ink-soft); text-align: right; }
+
+  /* ---- home ---- */
+  .home-cards { display: flex; flex-direction: column; gap: 16px; }
+  .nav-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+    padding: 24px 26px; box-shadow: var(--shadow); text-align: left; cursor: pointer;
+    display: flex; flex-direction: column; gap: 6px; width: 100%;
+    font-family: inherit; color: var(--ink);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .nav-card:hover { transform: translateY(-2px); }
+  .nav-card:hover { border-color: var(--accent); }
+  .nav-card .nav-title {
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif;
+    font-size: 20px; font-weight: 700;
+  }
+  .nav-card .nav-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+
+  /* ---- training ground ---- */
+  .table-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr 200px;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      ". toimen ."
+      "kamicha center shimocha"
+      ". you .";
+    gap: 14px;
+    align-items: start;
+  }
+  .seat-toimen { grid-area: toimen; }
+  .seat-kamicha { grid-area: kamicha; }
+  .seat-shimocha { grid-area: shimocha; }
+  .seat-you-mini { grid-area: you; }
+  .seat-center {
+    grid-area: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px; text-align: center; font-size: 13px; color: var(--ink-soft); padding: 8px 0;
+  }
+  .seat-center .kyoku-line { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif; font-size: 20px; font-weight: 700; color: var(--ink); }
+  .seat-center .dora-mini { display: flex; align-items: center; gap: 6px; }
+  .seat-center .dora-mini .tile { font-size: 26px; padding: 1px 2px 2px; }
+
+  .opp-block {
+    display: flex; flex-direction: column; gap: 6px; background: var(--surface-alt);
+    border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px;
+  }
+  .opp-head { display: flex; align-items: center; gap: 5px; font-size: 12px; flex-wrap: wrap; }
+  .opp-head .opp-name { font-weight: 700; }
+  .badge-riichi {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #ff3b30;
+    color: #fff;
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(255, 59, 48, 0.35);
+    letter-spacing: 0.05em;
+  }
+  .badge-ippatsu {
+    font-size: 11px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #fff;
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.4);
+    letter-spacing: 0.05em;
+    animation: ippatsuPulse 1.8s infinite ease-in-out;
+  }
+  @keyframes ippatsuPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.04); opacity: 0.92; }
+  }
+  .riichi-stick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 8px;
+    background: #fdfdfc;
+    border: 1px solid #c8c5ba;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    position: relative;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+  .riichi-stick::after {
+    content: '';
+    display: block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #ff3b30;
+    box-shadow: 0 0 2px rgba(255, 59, 48, 0.6);
+  }
+  .riichi-stick.large {
+    width: 48px;
+    height: 10px;
+    border-radius: 5px;
+  }
+  .riichi-stick.large::after {
+    width: 5px;
+    height: 5px;
+  }
+  .riichi-pool-banner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 2px 9px;
+    background: rgba(255, 59, 48, 0.09);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #e0281b;
+    margin: 2px 0;
+  }
+  .badge-naki { font-size: 11px; color: var(--ink-soft); border: 1px solid var(--line); padding: 1px 8px; border-radius: 999px; }
+  .badge-oya { font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .badge-wind { font-size: 11px; color: var(--ink-soft); border: 1px solid var(--line); padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+  .opp-river { display: grid; grid-template-columns: repeat(6, auto); gap: 3px; min-height: 26px; justify-content: start; }
+  .opp-river .tile { font-size: 21px; padding: 1px 2px 2px; }
+  .opp-river .tile.riichi-tile {
+    transform: rotate(90deg);
+    margin: 0 7px;
+    border-color: #ff3b30 !important;
+    background: rgba(255, 59, 48, 0.08);
+    box-shadow: 0 0 0 2px #ff3b30, 0 2px 10px rgba(255, 59, 48, 0.4);
+    position: relative;
+    z-index: 2;
+  }
+  .opp-river .tile.latest { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 2px 6px -1px rgba(0,0,0,0.25); }
+  .opp-river .tile.ron-target { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad), 0 2px 8px -1px rgba(0,0,0,0.3); }
+  .opp-block.winner-block { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .reveal-sub-row { display: flex; align-items: center; gap: 8px; }
+  .processing-note { text-align: center; font-size: 14px; color: var(--ink-soft); padding: 16px 0; }
+
+  .log-box {
+    background: var(--surface-alt); border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px 14px; font-size: 12px; color: var(--ink-soft); line-height: 1.8;
+    max-height: 130px; overflow-y: auto;
+  }
+  .log-box div:last-child { color: var(--ink); font-weight: 600; }
+
+  .you-block { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .you-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+  .you-melds { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .meld-group { display: inline-flex; gap: 3px; background: var(--surface-alt); border: 1px solid var(--line); border-radius: 10px; padding: 4px 6px; align-items: flex-end; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .meld-group .tile { font-size: 26px; padding: 1px 2px 2px; line-height: 1; box-sizing: border-box; }
+  .meld-col { display: inline-flex; align-items: flex-end; justify-content: center; }
+  .meld-col.horizontal {
+    width: 32px; height: 23px; position: relative;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .meld-col.horizontal .tile {
+    position: absolute;
+    transform: rotate(90deg);
+    transform-origin: center center;
+    margin: 0;
+  }
+  .meld-col.horizontal.kakan { height: 46px; }
+  .meld-col.horizontal.kakan .tile:first-child { bottom: 0; }
+  .meld-col.horizontal.kakan .tile:last-child { top: 0; }
+
+  /* 相手CPUの副露表示（コンパクト） */
+  .opp-melds { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-end; margin-top: 4px; }
+  .meld-group.compact { padding: 2px 4px; border-radius: 6px; gap: 2px; }
+  .meld-group.compact .tile { font-size: 19px; padding: 0 1px 1px; }
+  .meld-group.compact .meld-col.horizontal { width: 24px; height: 18px; }
+  .meld-group.compact .meld-col.horizontal.kakan { height: 35px; }
+
+  /* クイズ画面での副露表示 */
+  .quiz-melds { display: inline-flex; gap: 8px; align-items: flex-end; margin-left: 14px; }
+  .quiz-melds .meld-group { padding: 3px 5px; border-radius: 8px; }
+  .quiz-melds .meld-group .tile { font-size: 34px; padding: 1px 2px 3px; }
+  .quiz-melds .meld-col.horizontal { width: 42px; height: 30px; }
+  .quiz-melds .meld-col.horizontal.kakan { height: 60px; }
+
+  .hand-row { display: flex; flex-wrap: wrap; gap: 5px 4px; align-items: flex-end; }
+  .hand-row .tile { cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; position: relative; }
+  .hand-row .tile:hover { transform: translateY(-5px); }
+  .hand-row .tile.selected { transform: translateY(-10px); box-shadow: 0 0 0 2px var(--accent), 0 6px 14px -2px rgba(255, 92, 150, 0.4); }
+  .hand-row .tile.drawn { margin-left: 26px; position: relative; border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent); }
+  .tiles-row .tile.win-tile { margin-left: 24px; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); position: relative; }
+  .tiles-row .tile.win-tile::before { content: '和了'; position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .hand-row .tile.disabled { opacity: 0.4; cursor: default; }
+  .hand-row .tile.disabled:hover { transform: none; }
+  .hand-row .tile.safe::after {
+    content: ''; position: absolute; bottom: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--good);
+  }
+  .hand-row .tile.riichi-ok::before {
+    content: '⚑'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--accent-strong);
+  }
+
+  .tg-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+  .legend-row { display: flex; gap: 16px; font-size: 12px; color: var(--ink-soft); align-items: center; flex-wrap: wrap; }
+  .legend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); display: inline-block; margin-right: 4px; }
+  .legend-ring { width: 9px; height: 9px; border-radius: 3px; border: 2px solid var(--accent); display: inline-block; margin-right: 4px; }
+  .kb-guide { margin-left: auto; font-size: 11px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px; }
+  .kb-key { display: inline-block; padding: 1px 6px; font-size: 10px; font-family: inherit; font-weight: 700; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+  .settings-row { display: flex; justify-content: flex-end; }
+  .toggle-switch { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); cursor: pointer; user-select: none; }
+  .toggle-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .toggle-switch .track { width: 34px; height: 20px; border-radius: 999px; background: var(--line); position: relative; flex-shrink: 0; transition: background 0.15s ease; }
+  .toggle-switch .track::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: transform 0.15s ease;
+  }
+  .toggle-switch input:checked + .track { background: var(--accent); }
+  .toggle-switch input:checked + .track::after { transform: translateX(14px); }
+  .toggle-switch input:focus-visible + .track { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+  .legend-flag { color: var(--accent-strong); margin-right: 3px; }
+
+  .call-prompt {
+    background: var(--surface-alt); border: 2px solid var(--accent); border-radius: 16px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .call-prompt-title { font-weight: 700; font-size: 14px; }
+  .call-prompt .btn-main,
+  .call-prompt .btn-ghost2 {
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .call-prompt .btn-main.selected,
+  .call-prompt .btn-ghost2.selected {
+    box-shadow: 0 0 0 2px var(--accent-strong), 0 4px 12px -2px rgba(255, 92, 150, 0.5);
+    transform: translateY(-2px);
+    outline: none;
+  }
+
+  .reveal-box { background: var(--surface-alt); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .reveal-headline { font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif; font-size: 20px; font-weight: 700; }
+  .reveal-headline.bad { color: var(--bad); }
+  .reveal-headline.good { color: var(--good); }
+  .reveal-headline.neutral { color: var(--ink); }
+  .reveal-sub { font-weight: 700; font-size: 13px; color: var(--ink); margin-top: 6px; }
+  .reveal-headline-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .badge-wintype { font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 999px; }
+  .badge-wintype.tsumo { background: #dfe4ff; color: #3d3fa8; }
+  .badge-wintype.ron { background: var(--bad-bg); color: var(--bad); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .badge-wintype.tsumo { background: #33345c; color: #b7bcff; }
+  }
+  :root[data-theme="dark"] .badge-wintype.tsumo { background: #33345c; color: #b7bcff; }
+  .score-block { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .score-line { font-size: 13px; color: var(--ink); }
+  .score-total {
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic Medium", sans-serif;
+    font-size: 22px; font-weight: 700; color: var(--accent-strong); margin-top: 4px; font-variant-numeric: tabular-nums;
+  }
+
+  .wall-row { display: flex; flex-wrap: wrap; gap: 3px; max-width: 170px; justify-content: center; padding-top: 4px; }
+  .wall-stack {
+    position: relative;
+    width: 8px; height: 10px; border-radius: 2px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    border: 1px solid var(--accent-ink);
+  }
+  .wall-stack::before {
+    content: ''; position: absolute; top: -4px; left: 0; width: 100%; height: 100%;
+    background: inherit; border: inherit; border-radius: inherit; opacity: 0.65; z-index: -1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-main, .chip, .hand-row .tile { transition: none; }
+  }
+
+  /* 赤ドラ（赤牌）スタイル */
+  .tile.red-tile {
+    color: #e53e3e !important;
+    font-weight: 700;
+    text-shadow: 0 0 1px rgba(229, 62, 62, 0.4);
+    position: relative;
+  }
+  .tile.red-tile::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #e53e3e;
+    box-shadow: 0 0 4px rgba(229, 62, 62, 0.8);
+  }
+
+  /* カン面子および暗槓の伏せ牌スタイル */
+  .tile.face-down {
+    background: linear-gradient(135deg, #4a5568, #2d3748) !important;
+    color: transparent !important;
+    border-color: #2d3748 !important;
+    box-shadow: 0 1px 0 #1a202c !important;
+  }
+  .meld-group.kan-meld {
+    border-color: var(--accent);
+    background: rgba(255, 92, 150, 0.06);
+  }
+
+  /* カンドラ表示（複数並び） */
+  .dora-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* 実践編 設定画面 */
+  .settings-card {
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 28px 24px;
+    max-width: 520px;
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.08);
+  }
+  .settings-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+    text-align: center;
+    margin: 0;
+  }
+  .settings-desc {
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: -12px;
+  }
+  .settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .settings-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .settings-options {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .settings-option {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 14px;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    cursor: pointer;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    transition: all .15s ease;
+    user-select: none;
+  }
+  .settings-option:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .settings-option.selected {
+    background: var(--accent);
+    border-color: var(--accent-strong);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(255, 92, 150, 0.35);
+  }
+  .settings-option .opt-sub {
+    font-size: 11px;
+    font-weight: normal;
+    display: block;
+    margin-top: 3px;
+    opacity: 0.85;
+  }
+
+  /* 持ち点・順位表示 */
+  .seat-score-tag {
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    margin-left: 6px;
+    color: var(--ink);
+  }
+  .match-info-strip {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    padding: 4px 0;
+  }
+  .match-info-badge {
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 3px 10px;
+    color: var(--ink);
+  }
+
+  /* 総合リザルト画面（順位表） */
+  .match-result-card {
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .match-result-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .match-result-table th, .match-result-table td {
+    padding: 12px 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .match-result-table th {
+    color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 12px;
+    background: var(--surface);
+  }
+  .match-result-table tr.rank-1 td {
+    font-weight: 700;
+    color: var(--accent-strong);
+    background: rgba(255, 92, 150, 0.05);
+  }
+  .match-result-table .rank-badge {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    font-weight: 700;
+  }
+  .match-result-table tr.rank-1 .rank-badge {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .score-diff-plus { color: var(--good); font-weight: 700; }
+  .score-diff-minus { color: var(--bad); font-weight: 700; }
+
+  /* 局精算・点数移動バー */
+  .settle-diff-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 10px 0;
+  }
+  .settle-diff-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .settle-chip {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  .settle-chip.good {
+    color: var(--good);
+    border-color: rgba(72, 187, 120, 0.4);
+    background: rgba(72, 187, 120, 0.08);
+  }
+  .settle-chip.bad {
+    color: var(--bad);
+    border-color: rgba(245, 101, 101, 0.4);
+    background: rgba(245, 101, 101, 0.08);
+  }
+  .settle-chip.neutral {
+    color: var(--ink-soft);
+  }
+
+  /* 総合リザルト装飾 */
+  .match-result-eyebrow {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .match-result-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .match-result-comment {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .match-result-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .match-result-table tr.highlight-you {
+    background: rgba(255, 92, 150, 0.06);
+  }
+
+  /* Mリーグルール設定・リザルト装飾 */
+  .mleague-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #ff5c96 0%, #ff896b 100%);
+    color: #fff;
+    letter-spacing: 0.05em;
+  }
+  .settings-rule-box {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+  .settings-rule-box strong {
+    color: var(--ink);
+  }
+  .your-point-badge {
+    font-size: 18px;
+    font-weight: 800;
+    font-family: monospace, sans-serif;
+    padding: 3px 12px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  .your-point-badge.plus {
+    color: var(--good);
+    border-color: rgba(72, 187, 120, 0.4);
+    background: rgba(72, 187, 120, 0.08);
+  }
+  .your-point-badge.minus {
+    color: var(--bad);
+    border-color: rgba(245, 101, 101, 0.4);
+    background: rgba(245, 101, 101, 0.08);
+  }
+  .point-plus {
+    color: var(--good);
+    font-weight: 800;
+    font-family: monospace, sans-serif;
+  }
+  .point-minus {
+    color: var(--bad);
+    font-weight: 800;
+    font-family: monospace, sans-serif;
+  }
+  .match-rule-footnote {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+
+  /* 和了時のドラ・裏ドラ表示ストリップ */
+  .dora-strip {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .dora-strip-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dora-strip-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .dora-strip-sub {
+    font-size: 10px;
+    font-weight: normal;
+    color: var(--ink-soft);
+    margin-left: 4px;
+  }
+  .dora-strip-tiles {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+  }
+  .dora-strip-tiles .tile {
+    font-size: 26px;
+    padding: 1px 2px 2px;
+  }
+
+  /* ========== オンライン対戦（通信対局）スタイル ========== */
+  .online-lobby-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  .online-lobby-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .online-room-code-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-alt);
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin: 16px 0;
+  }
+  .online-room-code-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .online-room-code-val {
+    font-size: 24px;
+    font-weight: 900;
+    font-family: monospace;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+  .online-btn-copy {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .online-btn-copy:hover {
+    background: var(--surface-alt);
+    border-color: var(--accent);
+  }
+  .online-player-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .online-player-slot {
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .online-player-slot.occupied {
+    border-color: var(--accent);
+    background: rgba(43, 114, 186, 0.04);
+  }
+  .online-player-seat {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  .online-player-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .online-player-tag {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .online-player-tag.host {
+    background: var(--accent);
+    color: #fff;
+  }
+  .online-player-tag.cpu {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+  }
+  .online-player-tag.you {
+    background: #38a169;
+    color: #fff;
+  }
+  .online-badge-sync {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #38a169;
+    background: rgba(56, 161, 105, 0.1);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .online-badge-sync::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #38a169;
+    box-shadow: 0 0 6px #38a169;
+  }
+
+
+

@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/mahjong_training.html"
+    }
+  ]
+}
