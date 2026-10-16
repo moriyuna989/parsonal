@@ -1,7 +1,5 @@
-// =====================================================================
-// js/game_state.js
-// 状態管理・牌山操作・配牌生成・和了判定・点数計算
-// =====================================================================
+// js/game/state.js
+// 対局状態・牌山・局の初期化
 
 var G = null; // current game state
 var allowDamaten = true; // if false, every closed tenpai opponent must riichi (no silent tenpai)
@@ -127,26 +125,6 @@ function isFuritenYou() {
   return wait.some(function (w) { return riverIndices.includes(tileIndex(w)); });
 }
 
-function checkRon(discardCode, discarderSeat) {
-  var dIdx = tileIndex(discardCode);
-  for (var i = 0; i < SEATS.length; i++) {
-    var seat = SEATS[i];
-    if (seat === discarderSeat) continue;
-    if (seat === 'you') {
-      var you = G.players.you;
-      if (you.hand.length !== youRestLen()) continue;
-      var wait = findWaitsOpen(you.hand, you.melds.length);
-      var matchesWait = wait.some(function (w) { return tileIndex(w) === dIdx; });
-      if (matchesWait && !isFuritenYou() && canPlayerWinWith('you', discardCode, false)) return 'you';
-    } else {
-      var p = G.players[seat];
-      var oppMatches = p.isTenpai && p.wait.some(function (w) { return tileIndex(w) === dIdx; });
-      if (oppMatches && !isFuritenOpp(seat) && canPlayerWinWith(seat, discardCode, false)) return seat;
-    }
-  }
-  return null;
-}
-
 function nextSeat(seat) {
   var idx = SEATS.indexOf(seat);
   return SEATS[(idx + 1) % 4];
@@ -162,6 +140,10 @@ function cancelAllIppatsu() {
   SEATS.forEach(function (s) {
     if (G.players[s]) G.players[s].ippatsu = false;
   });
+  G.firstTurnUninterrupted = false;
+  G.firstTsumoAvailable = false;
+  G.firstTsumoSeat = null;
+  G.firstDrawWindowSeat = null;
 }
 window.cancelAllIppatsu = cancelAllIppatsu;
 
@@ -197,10 +179,10 @@ function newGame() {
 
   if (isPractice) {
     var players = {
-      you: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, riichiTurn: null, ippatsu: false, melds: [], isOpen: false, openLabel: null },
-      p2: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, riichiTurn: null, ippatsu: false, melds: [], isOpen: false, openLabel: null },
-      p3: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, riichiTurn: null, ippatsu: false, melds: [], isOpen: false, openLabel: null },
-      p4: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, riichiTurn: null, ippatsu: false, melds: [], isOpen: false, openLabel: null }
+      you: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, riichiTurn: null, ippatsu: false, melds: [], isOpen: false, openLabel: null, paoResponsibility: {} },
+      p2: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, riichiTurn: null, ippatsu: false, melds: [], isOpen: false, openLabel: null, paoResponsibility: {} },
+      p3: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, riichiTurn: null, ippatsu: false, melds: [], isOpen: false, openLabel: null, paoResponsibility: {} },
+      p4: { hand: [], river: [], isTenpai: false, wait: [], riichi: false, riichiTurn: null, ippatsu: false, melds: [], isOpen: false, openLabel: null, paoResponsibility: {} }
     };
     SEATS.forEach(function (seat) {
       for (var i = 0; i < 13; i++) players[seat].hand.push(drawRandom(pool));
@@ -225,10 +207,12 @@ function newGame() {
       doraIndicator: dora1, uraIndicator: ura1,
       doraIndicators: doraIndicators, uraIndicators: uraIndicators,
       T_elapsed: 1,
-      tenpaiSeats: [], lastDrawn: isYouDealer ? firstDrawn : null, selected: null, selectedIndex: null, log: log,
+      tenpaiSeats: [], lastDrawn: firstDrawn, initialDrawSeat: dealerSeat, selected: null, selectedIndex: null, log: log,
       dealerSeat: dealerSeat, seatWind: seatWind, kyokuWind: kyokuWind, kyokuNumber: kyokuNumber, honba: honba,
       currentTurnSeat: dealerSeat,
       processing: !isYouDealer, gameOver: false, outcome: null, justDrew: isYouDealer,
+      firstTurnUninterrupted: true, firstTsumoSeat: dealerSeat, firstTsumoAvailable: true, firstDrawWindowSeat: null,
+      lastDrawWasLastLiveTile: false, lastDrawWasRinshan: false, lastDiscardWasLastLiveTile: false,
       pendingCall: null, pendingCallIndex: null, pendingOpponentQueue: [], revealExpanded: false, lastDiscardSeat: null, lastTileClick: null,
       scoresSettled: false
     };
@@ -354,206 +338,10 @@ function newGame() {
     tenpaiSeats: tenpaiSeats, lastDrawn: lastDrawn, selected: null, selectedIndex: null, log: log,
     dealerSeat: dealerSeat, seatWind: seatWind, kyokuWind: kyokuWindTraining, kyokuNumber: kyokuNumberTraining,
     processing: false, gameOver: false, outcome: null, justDrew: true,
+    firstTurnUninterrupted: false, firstTsumoSeat: null, firstTsumoAvailable: false, firstDrawWindowSeat: null,
+    lastDrawWasLastLiveTile: false, lastDrawWasRinshan: false, lastDiscardWasLastLiveTile: false,
     pendingCall: null, pendingCallIndex: null, pendingOpponentQueue: [], revealExpanded: false, lastDiscardSeat: null, lastTileClick: null
   };
 }
 window.newGame = newGame;
 
-// Scores a win by a fixed-template tenpai opponent, reusing the same fu/tier logic as the scoring drill.
-function scoreTemplateWin(seat, isTsumo, winTile) {
-  var p = G.players[seat];
-  var tpl = p.tpl;
-  var dealer = (seat === G.dealerSeat);
-  var riichiActive = p.riichi;
-  var ippatsuActive = riichiActive && !!p.ippatsu;
-  var fullHandTiles = p.hand.concat([winTile]);
-  var doraList = G.doraIndicators || [G.doraIndicator];
-  var uraList = G.uraIndicators || (G.uraIndicator ? [G.uraIndicator] : []);
-  var doraTargets = doraList.map(nextTile);
-  var uraTargets = uraList.map(nextTile);
-  var doraCount = fullHandTiles.filter(function (t) {
-    return doraTargets.some(function (dt) { return isSameTileType(t, dt); });
-  }).length;
-  var redDoraCount = fullHandTiles.filter(isRedTile).length;
-  var uraDoraCount = riichiActive ? fullHandTiles.filter(function (t) {
-    return uraTargets.some(function (ut) { return isSameTileType(t, ut); });
-  }).length : 0;
-  var yakuHan = isTsumo ? tpl.yakuHanTsumo : tpl.yakuHanRon;
-  var han = tpl.isYakuman ? 13 : (yakuHan + (riichiActive ? 1 : 0) + (ippatsuActive ? 1 : 0) + doraCount + redDoraCount + (riichiActive ? uraDoraCount : 0));
-  var seatWindNum = windCharToNum(G.seatWind[seat]);
-  var roundWindNum = windCharToNum(G.kyokuWind);
-  var fu = tpl.isYakuman ? 0 : computeFu(tpl, isTsumo, seatWindNum, roundWindNum);
-  var tier = tierForHan(han);
-  var base = null;
-  if (!tier) {
-    base = fu * Math.pow(2, 2 + han);
-    if (base > 2000) { base = 2000; tier = { name: '満貫', nondealer: 8000, dealer: 12000 }; }
-  }
-  var total, perAll = null, perDealer = null, perNonDealer = null;
-  if (tier) {
-    total = dealer ? tier.dealer : tier.nondealer;
-    if (isTsumo) {
-      if (dealer) perAll = total / 3;
-      else { perNonDealer = total / 4; perDealer = total / 2; }
-    }
-  } else if (isTsumo) {
-    if (dealer) {
-      perAll = roundUp100(base * 2);
-      total = perAll * 3;
-    } else {
-      perDealer = roundUp100(base * 2);
-      perNonDealer = roundUp100(base * 1);
-      total = perDealer + perNonDealer * 2;
-    }
-  } else {
-    total = dealer ? roundUp100(base * 6) : roundUp100(base * 4);
-  }
-  var yakuNames = (tpl.isYakuman ? tpl.yakuNamesRon : (isTsumo ? tpl.yakuNamesTsumo : tpl.yakuNamesRon)).slice();
-  var parts = yakuNames.slice();
-  if (!tpl.isYakuman) {
-    if (riichiActive) parts.push('リーチ');
-    if (ippatsuActive) parts.push('一発');
-    if (doraCount > 0) parts.push('ドラ' + doraCount);
-    if (redDoraCount > 0) parts.push('赤ドラ' + redDoraCount);
-    if (riichiActive && uraDoraCount > 0) parts.push('裏ドラ' + uraDoraCount);
-  }
-  return {
-    han: han, fu: fu, tierName: tier ? tier.name : null, total: total,
-    perAll: perAll, perDealer: perDealer, perNonDealer: perNonDealer,
-    dealer: dealer, isTsumo: isTsumo, breakdownParts: parts, noYaku: false
-  };
-}
-
-// Scores any player's (you or CPU opponent) live winning hand accurately based on their own seat,
-// dealer status, melds, riichi state, and winds.
-function scorePlayerWin(seat, fullConcealedTiles, winTile, isTsumo) {
-  var player = G.players[seat];
-  var melds = player.melds || [];
-  var meldCount = melds.length;
-  var dealer = (G.dealerSeat === seat);
-  var riichiActive = player.riichi;
-  var ippatsuActive = riichiActive && !!player.ippatsu;
-  var meldTilesFlat = melds.reduce(function (a, m) { return a.concat(m.tiles); }, []);
-  var allHandTiles = fullConcealedTiles.concat(meldTilesFlat);
-  var doraList = G.doraIndicators || [G.doraIndicator];
-  var uraList = G.uraIndicators || (G.uraIndicator ? [G.uraIndicator] : []);
-  var doraTargets = doraList.map(nextTile);
-  var uraTargets = uraList.map(nextTile);
-  var doraCount = allHandTiles.filter(function (t) {
-    return doraTargets.some(function (dt) { return isSameTileType(t, dt); });
-  }).length;
-  var redDoraCount = allHandTiles.filter(isRedTile).length;
-  var uraDoraCount = riichiActive ? allHandTiles.filter(function (t) {
-    return uraTargets.some(function (ut) { return isSameTileType(t, ut); });
-  }).length : 0;
-
-  var counts = tilesToCounts(fullConcealedTiles);
-  var isKokushi = meldCount === 0 && isKokushiComplete(counts);
-  var isChiitoi = !isKokushi && meldCount === 0 && isChiitoiComplete(counts);
-
-  var seatWindChar = G.seatWind[seat];
-  var seatWindNum = windCharToNum(seatWindChar);
-  var roundWindNum = windCharToNum(G.kyokuWind);
-
-  var han, fu, parts;
-  if (isKokushi) {
-    han = 13; fu = 0; parts = ['国士無双'];
-  } else if (isChiitoi) {
-    parts = ['七対子']; han = 2;
-    if (isTsumo) { parts.push('ツモ'); han += 1; }
-    if (riichiActive) { parts.push('リーチ'); han += 1; }
-    if (ippatsuActive) { parts.push('一発'); han += 1; }
-    if (doraCount > 0) { parts.push('ドラ' + doraCount); han += doraCount; }
-    if (redDoraCount > 0) { parts.push('赤ドラ' + redDoraCount); han += redDoraCount; }
-    if (riichiActive && uraDoraCount > 0) { parts.push('裏ドラ' + uraDoraCount); han += uraDoraCount; }
-    fu = 25;
-  } else {
-    var d = decomposeConcealed(fullConcealedTiles);
-    if (!d) {
-      return { han: 0, fu: 0, tierName: null, total: 0, perAll: null, perDealer: null, perNonDealer: null, dealer: dealer, isTsumo: isTsumo, breakdownParts: [], noYaku: true };
-    }
-    var meldGroups = melds.map(function (m) {
-      return {
-        type: m.type === 'kan' ? 'kan' : (m.type === 'pon' ? 'triplet' : 'run'),
-        subType: m.subType || (m.type === 'kan' ? 'minkan' : null),
-        tiles: m.tiles,
-        concealed: (m.type === 'kan' && m.subType === 'ankan')
-      };
-    });
-    var fullGroups = d.groups.concat(meldGroups);
-    var w = analyzeWait(winTile, d.pairTile, fullGroups);
-    var yh = computeUserYakuHan(fullGroups, d.pairTile, w, {
-      isOpen: player.isOpen, isTsumo: isTsumo, riichi: riichiActive,
-      ippatsu: ippatsuActive,
-      seatWindNum: seatWindNum, roundWindNum: roundWindNum,
-      doraCount: doraCount, redDoraCount: redDoraCount, uraDoraCount: uraDoraCount
-    });
-    han = yh.han;
-    fu = computeUserFu(fullGroups, d.pairTile, w, isTsumo, player.isOpen, seatWindNum, roundWindNum, yh.pinfuApplies);
-    parts = yh.names;
-  }
-
-  if (!isKokushi && !isChiitoi && (!yh || !yh.hasYaku)) {
-    return { han: 0, fu: 0, tierName: null, total: 0, perAll: null, perDealer: null, perNonDealer: null, dealer: dealer, isTsumo: isTsumo, breakdownParts: [], noYaku: true };
-  }
-  if (han < 1) {
-    return { han: 0, fu: 0, tierName: null, total: 0, perAll: null, perDealer: null, perNonDealer: null, dealer: dealer, isTsumo: isTsumo, breakdownParts: [], noYaku: true };
-  }
-
-  var tier = tierForHan(han);
-  var base = null;
-  if (!tier) {
-    base = fu * Math.pow(2, 2 + han);
-    if (base > 2000) { base = 2000; tier = { name: '満貫', nondealer: 8000, dealer: 12000 }; }
-  }
-  var total, perAll = null, perDealer = null, perNonDealer = null;
-  if (tier) {
-    total = dealer ? tier.dealer : tier.nondealer;
-    if (isTsumo) {
-      if (dealer) perAll = total / 3;
-      else { perNonDealer = total / 4; perDealer = total / 2; }
-    }
-  } else if (isTsumo) {
-    if (dealer) {
-      perAll = roundUp100(base * 2);
-      total = perAll * 3;
-    } else {
-      perDealer = roundUp100(base * 2);
-      perNonDealer = roundUp100(base * 1);
-      total = perDealer + perNonDealer * 2;
-    }
-  } else {
-    total = dealer ? roundUp100(base * 6) : roundUp100(base * 4);
-  }
-  return {
-    han: han, fu: (isKokushi ? 0 : fu), tierName: tier ? tier.name : null, total: total,
-    perAll: perAll, perDealer: perDealer, perNonDealer: perNonDealer,
-    dealer: dealer, isTsumo: isTsumo, breakdownParts: parts, noYaku: false
-  };
-}
-window.scorePlayerWin = scorePlayerWin;
-
-function scoreUserWin(fullConcealedTiles, winTile, isTsumo) {
-  return scorePlayerWin('you', fullConcealedTiles, winTile, isTsumo);
-}
-
-function canPlayerWinWith(seat, winTile, isTsumo) {
-  var player = G.players[seat];
-  if (!player) return false;
-  var concealed = player.hand.slice();
-  if (!isTsumo) {
-    concealed.push(winTile);
-  }
-  var meldCount = player.melds ? player.melds.length : 0;
-  if (!isCompleteConcealed(concealed, meldCount)) return false;
-
-  if (player.tpl) {
-    var score = scoreTemplateWin(seat, isTsumo, winTile);
-    return !score.noYaku && score.han >= 1;
-  }
-
-  var score = scorePlayerWin(seat, concealed, winTile, isTsumo);
-  if (score.noYaku || score.han < 1) return false;
-  return true;
-}
-window.canPlayerWinWith = canPlayerWinWith;

@@ -1,5 +1,5 @@
 // =====================================================================
-// js/quiz.js
+// js/training/quiz.js
 // 点数計算ドリル（クイズ）画面・出題・正誤判定ロジック
 // =====================================================================
 
@@ -64,45 +64,29 @@ function initQuiz() {
       }
     }
 
-    var yakuHan = isTsumo ? t.yakuHanTsumo : t.yakuHanRon;
-    var han = t.isYakuman ? 13 : (yakuHan + (riichiActive ? 1 : 0) + (ippatsuActive ? 1 : 0) + doraCount + redDoraCount + (riichiActive ? uraDoraCount : 0));
-    var fu = t.isYakuman ? 0 : computeFu(t, isTsumo);
-
-    var tier = tierForHan(han);
-    var base = null;
-    if (!tier) {
-      base = fu * Math.pow(2, 2 + han);
-      if (base > 2000) { base = 2000; tier = { name: '満貫', nondealer: 8000, dealer: 12000 }; }
-    }
-
-    var total, perAll = null, perDealer = null, perNonDealer = null;
-    if (tier) {
-      total = dealer ? tier.dealer : tier.nondealer;
-      if (isTsumo) {
-        if (dealer) perAll = total / 3;
-        else { perNonDealer = total / 4; perDealer = total / 2; }
-      }
-    } else {
-      if (isTsumo) {
-        if (dealer) { perAll = roundUp100(base * 2); total = perAll * 3; }
-        else { perDealer = roundUp100(base * 2); perNonDealer = roundUp100(base * 1); total = perDealer + perNonDealer * 2; }
-      } else {
-        total = dealer ? roundUp100(base * 6) : roundUp100(base * 4);
-      }
-    }
-
-    var yakuNames = (t.isYakuman ? t.yakuNamesRon : (isTsumo ? t.yakuNamesTsumo : t.yakuNamesRon)).slice();
-    var parts = yakuNames.slice();
-    if (!t.isYakuman) {
-      if (riichiActive) parts.push('リーチ');
-      if (ippatsuActive) parts.push('一発');
-      if (doraCount > 0) parts.push('ドラ' + doraCount);
-      if (redDoraCount > 0) parts.push('赤ドラ' + redDoraCount);
-      if (riichiActive && uraDoraCount > 0) parts.push('裏ドラ' + uraDoraCount);
-    }
-    var breakdownText = t.isYakuman
-      ? (parts.join('+') + ' → 役満')
-      : (parts.join('+') + ' = ' + han + '翻' + (tier ? '（' + tier.name + '）' : ' ' + fu + '符'));
+    var result = scoreHand(concealed.concat([t.winTile]), t.winTile, quizMelds, {
+      isTsumo: isTsumo,
+      isOpen: t.isOpen,
+      dealer: dealer,
+      riichi: riichiActive,
+      ippatsu: ippatsuActive,
+      seatWindNum: windCharToNum(seatWind),
+      roundWindNum: windCharToNum(kyokuWind),
+      doraIndicators: doraIndicator ? [doraIndicator] : [],
+      uraIndicators: uraIndicator ? [uraIndicator] : []
+    });
+    if (!result.isComplete || result.noYaku) return makeQuestion();
+    var han = result.han;
+    var fu = result.fu;
+    var tier = result.tierName;
+    var total = result.total;
+    var perAll = result.perAll;
+    var perDealer = result.perDealer;
+    var perNonDealer = result.perNonDealer;
+    var parts = result.breakdownParts;
+    var breakdownText = result.yakumanUnits
+      ? (parts.join('+') + ' → ' + tier)
+      : (parts.join('+') + ' = ' + han + '翻' + (tier ? '（' + tier + '）' : ' ' + fu + '符'));
 
     return {
       t: t, dealer: dealer, winType: winType, isTsumo: isTsumo,
@@ -111,33 +95,18 @@ function initQuiz() {
       riichiActive: riichiActive, ippatsuActive: ippatsuActive,
       doraIndicator: doraIndicator, uraIndicator: uraIndicator,
       total: total, perAll: perAll, perDealer: perDealer, perNonDealer: perNonDealer,
-      tierName: tier ? tier.name : null, breakdownText: breakdownText
+      tierName: tier, breakdownText: breakdownText
     };
   }
 
   function scoreTableHtml() {
     var hans = [1, 2, 3, 4];
-    function ronCell(fu, han, dealer) {
-      var tier = tierForHan(han);
-      if (tier) return (dealer ? tier.dealer : tier.nondealer).toLocaleString();
-      var base = fu * Math.pow(2, 2 + han);
-      if (base > 2000) return dealer ? '12,000' : '8,000';
-      return roundUp100(base * (dealer ? 6 : 4)).toLocaleString();
-    }
+    function ronCell(fu, han, dealer) { return scorePoints(han, fu, dealer, false, 0).total.toLocaleString(); }
     function tsumoNonDealerCell(fu, han) {
-      var tier = tierForHan(han);
-      if (tier) return (tier.nondealer / 4).toLocaleString() + '・' + (tier.nondealer / 2).toLocaleString();
-      var base = fu * Math.pow(2, 2 + han);
-      if (base > 2000) return '2,000・4,000';
-      return roundUp100(base).toLocaleString() + '・' + roundUp100(base * 2).toLocaleString();
+      var score = scorePoints(han, fu, false, true, 0);
+      return score.perNonDealer.toLocaleString() + '・' + score.perDealer.toLocaleString();
     }
-    function tsumoDealerCell(fu, han) {
-      var tier = tierForHan(han);
-      if (tier) return (tier.dealer / 3).toLocaleString();
-      var base = fu * Math.pow(2, 2 + han);
-      if (base > 2000) return '4,000';
-      return roundUp100(base * 2).toLocaleString();
-    }
+    function tsumoDealerCell(fu, han) { return scorePoints(han, fu, true, true, 0).perAll.toLocaleString(); }
     function buildTable(title, fus, cellFn) {
       var head = '<tr><th>符＼翻</th>' + hans.map(function (h) { return '<th>' + h + '翻</th>'; }).join('') + '</tr>';
       var rows = fus.map(function (fu) {
