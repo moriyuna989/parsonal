@@ -30,8 +30,9 @@ function allHandsHtml() {
 
   return ['you', 'p2', 'p3', 'p4'].map(function (seat) {
     var p = G.players[seat];
-    var info = (typeof OnlineGame !== 'undefined') ? OnlineGame.getSeatInfo(seat) : { name: (seat === 'you' ? 'あなた' : SEAT_NAME[seat]), tagType: (seat === 'you' ? 'tag-me' : 'tag-cpu'), tagText: (seat === 'you' ? 'あなた' : 'CPU') };
-    var label = info.name + ' <span class="player-identity-tag ' + info.tagType + '">' + info.tagText + '</span>';
+    var isOnline = typeof OnlineGame !== 'undefined' && OnlineGame.isOnline();
+    var info = isOnline ? OnlineGame.getSeatInfo(seat) : { name: (seat === 'you' ? 'あなた' : SEAT_NAME[seat]), tagType: (seat === 'you' ? 'tag-me' : 'tag-cpu'), tagText: (seat === 'you' ? 'あなた' : 'CPU') };
+    var label = playerIdentityHtml(info, isOnline);
     var isWinner = hl.winnerSeat === seat;
     var winBadge = isWinner ? '<span class="badge-wintype ' + (hl.winType === 'tsumo' ? 'tsumo' : 'ron') + '">' + (hl.winType === 'tsumo' ? 'ツモ' : 'ロン') + '</span>' : '';
 

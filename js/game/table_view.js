@@ -27,6 +27,12 @@ function isWinnerBlock(seat) {
   return G.gameOver && hl.winnerSeat === seat;
 }
 
+function playerIdentityHtml(info, isOnline) {
+  if (isOnline) return '<span class="player-identity-tag ' + info.tagType + '">' + info.name + '</span>';
+  return '<span class="opp-name">' + info.name + '</span>' +
+    '<span class="player-identity-tag ' + info.tagType + '">' + info.tagText + '</span>';
+}
+
 function oppBlockHtml(seat) {
   var p = G.players[seat];
   var badges = '';
@@ -43,10 +49,11 @@ function oppBlockHtml(seat) {
     ? '<div class="opp-melds">' + renderMeldsHtml(p.melds, seat, 'compact') + '</div>'
     : '';
 
-  var info = (typeof OnlineGame !== 'undefined') ? OnlineGame.getSeatInfo(seat) : { name: SEAT_NAME[seat], tagType: 'tag-cpu', tagText: 'CPU' };
-  var tagBadge = '<span class="player-identity-tag ' + info.tagType + '">' + info.tagText + '</span>';
+  var isOnline = typeof OnlineGame !== 'undefined' && OnlineGame.isOnline();
+  var info = isOnline ? OnlineGame.getSeatInfo(seat) : { name: SEAT_NAME[seat], tagType: 'tag-cpu', tagText: 'CPU' };
+  var identity = playerIdentityHtml(info, isOnline);
 
-  return '<div class="opp-block' + (isWinnerBlock(seat) ? ' winner-block' : '') + '"><div class="opp-head"><span class="opp-name">' + info.name + '</span>' + tagBadge + scoreTag + badges + meldsHtml + '</div>' + riverHtml(seat) + '</div>';
+  return '<div class="opp-block' + (isWinnerBlock(seat) ? ' winner-block' : '') + '"><div class="opp-head">' + identity + scoreTag + badges + meldsHtml + '</div>' + riverHtml(seat) + '</div>';
 }
 
 function youMiniHtml() {
@@ -61,10 +68,11 @@ function youMiniHtml() {
   badges += winnerBadgeHtml('you');
   var scoreTag = matchState ? '<span class="seat-score-tag">' + matchState.scores.you.toLocaleString() + '点</span>' : '';
 
-  var info = (typeof OnlineGame !== 'undefined') ? OnlineGame.getSeatInfo('you') : { name: 'あなた', tagType: 'tag-me', tagText: 'あなた' };
-  var tagBadge = '<span class="player-identity-tag ' + info.tagType + '">' + info.tagText + '</span>';
+  var isOnline = typeof OnlineGame !== 'undefined' && OnlineGame.isOnline();
+  var info = isOnline ? OnlineGame.getSeatInfo('you') : { name: 'あなた', tagType: 'tag-me', tagText: 'あなた' };
+  var identity = playerIdentityHtml(info, isOnline);
 
-  return '<div class="opp-block' + (isWinnerBlock('you') ? ' winner-block' : '') + '"><div class="opp-head"><span class="opp-name">' + info.name + '</span>' + tagBadge + scoreTag + badges + '</div>' + riverHtml('you') + '</div>';
+  return '<div class="opp-block' + (isWinnerBlock('you') ? ' winner-block' : '') + '"><div class="opp-head">' + identity + scoreTag + badges + '</div>' + riverHtml('you') + '</div>';
 }
 
 function wallVisualHtml() {

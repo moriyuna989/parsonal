@@ -168,13 +168,16 @@ function renderLobby() {
 
   var slotsHtml = OnlineGameRuntime.seatsConfig.map(function (s) {
     var isMe = (s.seat === OnlineGameRuntime.myLogicalSeat);
-    var tagHtml = s.seat === 'you'
-      ? '<span class="online-player-tag host">ホスト</span>'
-      : (s.isCpu ? '<span class="online-player-tag cpu">CPU</span>' : '<span class="online-player-tag you">参加中</span>');
+    var localSeat = logicalToLocalSeat(s.seat);
+    var info = getSeatInfo(localSeat);
+    var roleClass = info.tagType === 'tag-me' ? 'self'
+      : info.tagType === 'tag-host' ? 'host'
+      : info.tagType === 'tag-human' ? 'opponent'
+      : 'cpu';
+    var tagHtml = '<span class="online-player-tag ' + roleClass + '">' + info.name + '</span>';
     var seatNames = { you: '東家 (親)', p2: '南家', p3: '対面 (西)', p4: '上家 (北)' };
-    return '<div class="online-player-slot ' + (!s.isCpu ? 'occupied' : '') + '">' +
-      '<div><div class="online-player-seat">' + seatNames[s.seat] + '</div>' +
-      '<div class="online-player-name">' + s.name + (isMe ? ' (あなた)' : '') + '</div></div>' +
+    return '<div class="online-player-slot ' + (!s.isCpu ? 'occupied ' : '') + (isMe ? 'is-self' : '') + '">' +
+      '<div><div class="online-player-seat">' + seatNames[s.seat] + '</div></div>' +
       tagHtml +
       '</div>';
   }).join('');

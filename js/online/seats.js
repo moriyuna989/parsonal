@@ -56,29 +56,30 @@ function getSeatInfo(localSeat) {
 
   if (!slot) {
     return {
-      name: SEAT_NAME[localSeat] || localSeat,
-      isCpu: true,
+      name: isMe ? (isHostSlot ? '自分（ホスト）' : '自分') : 'CPU',
+      isCpu: !isMe,
       isYou: isMe,
       isHost: isHostSlot,
-      tagType: 'tag-cpu',
-      tagText: 'CPU'
+      tagType: isMe ? 'tag-me' : 'tag-cpu',
+      tagText: isMe ? (isHostSlot ? '自分（ホスト）' : '自分') : 'CPU'
     };
   }
 
   if (isMe) {
+    var myLabel = isHostSlot ? '自分（ホスト）' : '自分';
     return {
-      name: 'あなた',
+      name: myLabel,
       isCpu: false,
       isYou: true,
       isHost: isHostSlot,
       tagType: 'tag-me',
-      tagText: isHostSlot ? 'あなた (ホスト)' : 'あなた'
+      tagText: myLabel
     };
   }
 
   if (slot.isCpu) {
     return {
-      name: slot.name,
+      name: 'CPU',
       isCpu: true,
       isYou: false,
       isHost: false,
@@ -88,12 +89,12 @@ function getSeatInfo(localSeat) {
   }
 
   return {
-    name: slot.name,
+    name: isHostSlot ? 'ホスト' : '対戦相手',
     isCpu: false,
     isYou: false,
     isHost: isHostSlot,
     tagType: isHostSlot ? 'tag-host' : 'tag-human',
-    tagText: isHostSlot ? '対戦相手 (ホスト)' : '対戦相手'
+    tagText: isHostSlot ? 'ホスト' : '対戦相手'
   };
 }
 
