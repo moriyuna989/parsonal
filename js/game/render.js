@@ -17,6 +17,12 @@ function settingsRowHtml() {
 }
 
 function render() {
+  if (typeof ensureResponsiveStyles === 'function') ensureResponsiveStyles();
+  if (document.body && document.body.classList) {
+    if (isPractice) document.body.classList.add('game-mode');
+    else document.body.classList.remove('game-mode');
+    document.body.classList.toggle('game-over-mode', !!G.gameOver);
+  }
   var html = '<div class="card">';
   html += settingsRowHtml();
   html += '<div class="table-grid">' +

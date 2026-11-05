@@ -75,6 +75,7 @@ function calculateMLeaguePoints(scores, riichiPool) {
 window.calculateMLeaguePoints = calculateMLeaguePoints;
 
 function renderMatchFinalResult() {
+  if (document.body && document.body.classList) document.body.classList.remove('game-mode', 'game-over-mode');
   if (window._tgKeyHandler) {
     window.removeEventListener('keydown', window._tgKeyHandler);
     window._tgKeyHandler = null;

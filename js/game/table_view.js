@@ -209,8 +209,9 @@ function pendingRonOfferHtml() {
   var offer = G.pendingRonOffer;
   var fromName = typeof OnlineGame !== 'undefined' ? OnlineGame.getSeatInfo(offer.fromSeat).name : SEAT_NAME[offer.fromSeat];
   return '<div class="call-prompt"><div class="call-prompt-title">' + fromName + 'の' + tileName(offer.tile) + '、ロンしますか？</div>' +
-    '<div class="tg-controls"><button class="btn-main" id="btnAcceptRon">ロン</button>' +
-    '<button class="btn-ghost2" id="btnPassRon">見逃す</button></div></div>';
+    '<div class="tg-controls"><button class="btn-main" id="btnAcceptRon">ロン (R)</button>' +
+    '<button class="btn-ghost2" id="btnPassRon">見逃す (Esc)</button></div>' +
+    '<div class="kb-guide ron-kb-guide"><span class="kb-key">R</span> ロン / <span class="kb-key">Esc</span> 見逃す</div></div>';
 }
 
 function youStatusHtml() {
