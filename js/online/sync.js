@@ -187,6 +187,8 @@ function syncRoundOver() {
         ippatsuStates: ippatsuStates,
         doraIndicators: G.doraIndicators,
         uraIndicators: G.uraIndicators,
+        replayRound: replayWorking && replayWorking.rounds.length ? replayWorking.rounds[replayWorking.rounds.length - 1] : null,
+        replayFinished: checkKyokuResultStatus().isFinished,
         scores: matchState ? matchState.scores : null,
         riichiPool: matchState ? matchState.riichiPool : 0
       });

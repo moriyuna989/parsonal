@@ -211,6 +211,7 @@ function handleGuestRoundOver(msg) {
   if (matchState && msg.riichiPool !== undefined) matchState.riichiPool = msg.riichiPool;
   if (msg.doraIndicators) G.doraIndicators = msg.doraIndicators.slice();
   if (msg.uraIndicators) G.uraIndicators = msg.uraIndicators.slice();
+  if (msg.replayRound) receiveReplayRound(msg.replayRound, !!msg.replayFinished);
   G.processing = false;
   render();
 }

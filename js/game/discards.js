@@ -69,6 +69,7 @@ function afterUserDiscard(tileCode, viaRiichi) {
     G.players.you.ippatsu = false;
   }
   G.log.push('あなたが' + tileName(tileCode) + 'を切りました。' + (viaRiichi ? '（リーチ宣言）' : ''));
+  if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot();
   var continueAfterDiscard = function () {
     if (viaRiichi) commitRiichiDeclaration('you', doubleRiichi);
     G.players.you.wait = findWaitsOpen(G.players.you.hand, G.players.you.melds.length);
@@ -131,6 +132,7 @@ function executeOnlineGuestDiscard(seat, tileCode, viaRiichi, senderId) {
   }
   var seatName = (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) ? OnlineGame.getSeatDisplayName(seat) : (SEAT_NAME[seat] || seat);
   G.log.push(seatName + 'が' + tileName(tileCode) + 'を切りました。' + (viaRiichi ? '（リーチ宣言）' : ''));
+  if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot();
 
   var continueAfterDiscard = function () {
     if (viaRiichi) commitRiichiDeclaration(seat, doubleRiichi);

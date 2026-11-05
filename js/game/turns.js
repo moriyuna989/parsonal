@@ -133,6 +133,7 @@ function advancePracticeTurn() {
     clearTemporaryFuriten(seat);
   }
   if (!initialCpuDraw) p.hand.push(draw);
+  if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot(SEAT_NAME[seat] + 'が' + tileName(draw) + 'をツモりました。');
 
   if (isComplete14(p.hand)) {
     var winScore = scorePlayerWin(seat, p.hand, draw, true);
@@ -233,6 +234,7 @@ function advancePracticeTurn() {
   p.river.push(discard);
   recordDiscardScoringContext(seat);
   G.lastDiscardSeat = seat;
+  if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot();
 
   if (!p.riichi) {
     p.wait = findWaitsOpen(p.hand, p.melds ? p.melds.length : 0);

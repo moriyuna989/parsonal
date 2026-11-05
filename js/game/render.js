@@ -62,6 +62,7 @@ function render() {
   } else if (window.wireEvents) {
     window.wireEvents();
   }
+  if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot();
 }
 window.render = render;
 

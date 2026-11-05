@@ -148,6 +148,7 @@ function renderMatchFinalResult() {
       '<strong>【Mリーグルール計算方式】</strong> 25,000点持ち／30,000点返し（オカ20pt）、順位ウマ 1位:+30 / 2位:+10 / 3位:-10 / 4位:-30（実質順位点: +50 / +10 / -10 / -30）。小数点第1位まで計算。' +
     '</div>' +
     '<div class="match-result-actions">' +
+    '<button class="btn-secondary" id="btnOpenReplay">対局をリプレイ</button>' +
     '<button class="btn-main" id="btnRestartSameMatch">同じ設定でもう一度 (Enter)</button>' +
     '<button class="btn-secondary" id="btnBackToSettings">対局設定に戻る</button>' +
     '<button class="btn-secondary" id="btnBackToHome">ホームに戻る</button>' +
@@ -156,6 +157,8 @@ function renderMatchFinalResult() {
 
   var root = document.getElementById('tgRoot');
   if (root) root.innerHTML = html;
+
+  document.getElementById('btnOpenReplay').addEventListener('click', openLastReplay);
 
   document.getElementById('btnRestartSameMatch').addEventListener('click', function () {
     if (window._tgKeyHandler) {

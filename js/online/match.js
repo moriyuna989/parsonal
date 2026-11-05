@@ -21,6 +21,7 @@ function startOnlineMatchAsHost() {
     dealerSeat: SEATS[Math.floor(Math.random() * SEATS.length)]
   };
 
+  startReplayMatch(match, 'you', OnlineGameRuntime.seatsConfig);
   initTraining('practice', match);
 
   sendCurrentRoundToGuests();
@@ -67,6 +68,7 @@ function handleGuestStartMatch(msg) {
   wireBack();
 
   OnlineGameRuntime.myLogicalSeat = msg.seat;
+  if (msg.matchState.kyokuIndex === 1) startReplayMatch(msg.matchState, msg.seat, msg.seatsConfig);
   matchState = Object.assign({}, msg.matchState);
   gameMode = 'practice';
   isPractice = true;
