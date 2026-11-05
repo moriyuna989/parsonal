@@ -175,7 +175,7 @@ function renderLobby() {
       : info.tagType === 'tag-human' ? 'opponent'
       : 'cpu';
     var tagHtml = '<span class="online-player-tag ' + roleClass + '">' + info.name + '</span>';
-    var seatNames = { you: '東家 (親)', p2: '南家', p3: '対面 (西)', p4: '上家 (北)' };
+    var seatNames = { you: '席1', p2: '席2', p3: '席3', p4: '席4' };
     return '<div class="online-player-slot ' + (!s.isCpu ? 'occupied ' : '') + (isMe ? 'is-self' : '') + '">' +
       '<div><div class="online-player-seat">' + seatNames[s.seat] + '</div></div>' +
       tagHtml +

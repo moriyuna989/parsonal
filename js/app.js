@@ -170,7 +170,7 @@ function startPracticeMatch(config) {
     honba: 0,
     riichiPool: 0,
     scores: { you: 25000, p2: 25000, p3: 25000, p4: 25000 },
-    dealerSeat: 'you'
+    dealerSeat: SEATS[Math.floor(Math.random() * SEATS.length)]
   };
   initTraining('practice', match);
 }
