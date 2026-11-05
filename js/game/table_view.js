@@ -11,7 +11,7 @@ function riverHtml(seat) {
       if (G.gameOver && hl.ronSeat === seat) classes.push('ron-target');
       else if (!G.gameOver && G.lastDiscardSeat === seat) classes.push('latest');
     }
-    return tileEl(c, classes.join(' '));
+    return gameTileEl(c, classes.join(' '));
   }).join('');
   return '<div class="opp-river">' + html + '</div>';
 }
@@ -46,7 +46,7 @@ function oppBlockHtml(seat) {
   badges += winnerBadgeHtml(seat);
   var scoreTag = matchState ? '<span class="seat-score-tag">' + matchState.scores[seat].toLocaleString() + '点</span>' : '';
   var meldsHtml = (p.melds && p.melds.length)
-    ? '<div class="opp-melds">' + renderMeldsHtml(p.melds, seat, 'compact') + '</div>'
+    ? '<div class="opp-melds">' + renderMeldsHtml(p.melds, seat, 'compact', gameTileEl) + '</div>'
     : '';
 
   var isOnline = typeof OnlineGame !== 'undefined' && OnlineGame.isOnline();
@@ -128,7 +128,7 @@ function logHtml() {
 function youMeldsHtml() {
   var melds = G.players.you.melds;
   if (!melds || !melds.length) return '';
-  return '<div class="you-melds">' + renderMeldsHtml(melds, 'you') + '</div>';
+  return '<div class="you-melds">' + renderMeldsHtml(melds, 'you', null, gameTileEl) + '</div>';
 }
 
 function youHandHtml() {
@@ -144,6 +144,7 @@ function youHandHtml() {
     var classes = [];
     if (isDrawn) classes.push('drawn');
     if (isRedTile(code)) classes.push('red-tile');
+    if (isVisibleDoraTile(code)) classes.push('dora-tile');
     var isSelected = (G.selectedIndex !== null && G.selectedIndex !== undefined && G.selectedIndex >= 0)
       ? (G.selectedIndex === idx)
       : (G.selected === code);

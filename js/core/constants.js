@@ -61,6 +61,14 @@ function nextTile(code) {
   return ((t.num % 9) + 1) + t.suit;
 }
 
+function isVisibleDoraTile(code) {
+  if (!code || typeof G === 'undefined' || !G) return false;
+  var indicators = G.doraIndicators || (G.doraIndicator ? [G.doraIndicator] : []);
+  return indicators.filter(Boolean).some(function (indicator) {
+    return isSameTileType(code, nextTile(indicator));
+  });
+}
+
 function sortKey(code) {
   var t = parseTile(code);
   return SUIT_ORDER[t.suit] * 10 + t.num - (t.isRed ? 0.1 : 0);
@@ -87,6 +95,12 @@ function tileEl(code, cls) {
   return '<span class="tile' + (classes.length ? ' ' + classes.join(' ') : '') + '" data-tile="' + code + '">' + tileGlyph(code) + '</span>';
 }
 
+function gameTileEl(code, cls) {
+  var doraCls = isVisibleDoraTile(code) ? 'dora-tile' : '';
+  var combinedCls = [cls, doraCls].filter(Boolean).join(' ');
+  return tileEl(code, combinedCls);
+}
+
 var SEATS_ORDER = ['you', 'p2', 'p3', 'p4'];
 
 function getMeldDirection(ownerSeat, fromSeat) {
@@ -104,8 +118,9 @@ function getMeldDirection(ownerSeat, fromSeat) {
   return 'kamicha';
 }
 
-function renderMeldHtml(m, ownerSeat, extraCls) {
+function renderMeldHtml(m, ownerSeat, extraCls, tileRenderer) {
   if (!m) return '';
+  var renderTile = tileRenderer || tileEl;
   var groupCls = 'meld-group' + (extraCls ? ' ' + extraCls : '');
 
   // 暗槓の場合
@@ -114,8 +129,8 @@ function renderMeldHtml(m, ownerSeat, extraCls) {
     var inner2 = (m.tiles && m.tiles[2]) || m.tiles[0];
     return '<div class="' + groupCls + ' kan-meld">' +
       '<span class="meld-col"><span class="tile face-down">🀫</span></span>' +
-      '<span class="meld-col">' + tileEl(inner1) + '</span>' +
-      '<span class="meld-col">' + tileEl(inner2) + '</span>' +
+      '<span class="meld-col">' + renderTile(inner1) + '</span>' +
+      '<span class="meld-col">' + renderTile(inner2) + '</span>' +
       '<span class="meld-col"><span class="tile face-down">🀫</span></span>' +
       '</div>';
   }
@@ -134,9 +149,9 @@ function renderMeldHtml(m, ownerSeat, extraCls) {
       tiles = [called].concat(rest);
     }
     return '<div class="' + groupCls + '">' +
-      '<span class="meld-col horizontal">' + tileEl(tiles[0]) + '</span>' +
-      '<span class="meld-col">' + tileEl(tiles[1]) + '</span>' +
-      '<span class="meld-col">' + tileEl(tiles[2]) + '</span>' +
+      '<span class="meld-col horizontal">' + renderTile(tiles[0]) + '</span>' +
+      '<span class="meld-col">' + renderTile(tiles[1]) + '</span>' +
+      '<span class="meld-col">' + renderTile(tiles[2]) + '</span>' +
       '</div>';
   }
 
@@ -150,9 +165,9 @@ function renderMeldHtml(m, ownerSeat, extraCls) {
     var cols = [];
     for (var i = 0; i < 3; i++) {
       if (i === hIdx) {
-        cols.push('<span class="meld-col horizontal kakan">' + tileEl(baseTiles[i]) + tileEl(extraTile) + '</span>');
+        cols.push('<span class="meld-col horizontal kakan">' + renderTile(baseTiles[i]) + renderTile(extraTile) + '</span>');
       } else {
-        cols.push('<span class="meld-col">' + tileEl(baseTiles[i]) + '</span>');
+        cols.push('<span class="meld-col">' + renderTile(baseTiles[i]) + '</span>');
       }
     }
     return '<div class="' + groupCls + ' kan-meld">' + cols.join('') + '</div>';
@@ -164,9 +179,9 @@ function renderMeldHtml(m, ownerSeat, extraCls) {
     var kanTiles = (m.tiles || []).slice();
     var kanCols = kanTiles.map(function (tile, idx) {
       if (idx === hIdxKan) {
-        return '<span class="meld-col horizontal">' + tileEl(tile) + '</span>';
+        return '<span class="meld-col horizontal">' + renderTile(tile) + '</span>';
       }
-      return '<span class="meld-col">' + tileEl(tile) + '</span>';
+      return '<span class="meld-col">' + renderTile(tile) + '</span>';
     });
     return '<div class="' + groupCls + ' kan-meld">' + kanCols.join('') + '</div>';
   }
@@ -185,17 +200,17 @@ function renderMeldHtml(m, ownerSeat, extraCls) {
   }
   var ponCols = ponTiles.map(function (tile, idx) {
     if (idx === hIdxPon) {
-      return '<span class="meld-col horizontal">' + tileEl(tile) + '</span>';
+      return '<span class="meld-col horizontal">' + renderTile(tile) + '</span>';
     }
-    return '<span class="meld-col">' + tileEl(tile) + '</span>';
+    return '<span class="meld-col">' + renderTile(tile) + '</span>';
   });
   return '<div class="' + groupCls + '">' + ponCols.join('') + '</div>';
 }
 
-function renderMeldsHtml(melds, ownerSeat, extraCls) {
+function renderMeldsHtml(melds, ownerSeat, extraCls, tileRenderer) {
   if (!melds || !melds.length) return '';
   return melds.map(function (m) {
-    return renderMeldHtml(m, ownerSeat, extraCls);
+    return renderMeldHtml(m, ownerSeat, extraCls, tileRenderer);
   }).join('');
 }
 

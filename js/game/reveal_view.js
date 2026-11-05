@@ -4,7 +4,7 @@
 function handRow(seat) {
   var p = G.players[seat];
   var tiles = sortTiles(p.hand);
-  var html = tiles.map(function (c) { return tileEl(c); }).join('');
+  var html = tiles.map(function (c) { return gameTileEl(c); }).join('');
   return '<div class="tiles-wrap"><div class="tiles-row">' + html + '</div></div>' +
     '<div class="footnote">待ち: ' + p.wait.map(tileName).join('・') + '</div>' + damatenNoteHtml(seat);
 }
@@ -69,16 +69,16 @@ function allHandsHtml() {
         if (idx !== -1) handCopy.splice(idx, 1);
       }
       var sortedBase = sortTiles(handCopy);
-      var baseHtml = sortedBase.map(function (c) { return tileEl(c); }).join('');
-      var winTileHtml = tileEl(winTile, 'win-tile');
+      var baseHtml = sortedBase.map(function (c) { return gameTileEl(c); }).join('');
+      var winTileHtml = gameTileEl(winTile, 'win-tile');
       tilesHtml = '<div class="tiles-wrap"><div class="tiles-row">' + baseHtml + winTileHtml + '</div></div>';
     } else {
       var tiles = sortTiles(p.hand);
-      tilesHtml = '<div class="tiles-wrap"><div class="tiles-row">' + tiles.map(function (c) { return tileEl(c); }).join('') + '</div></div>';
+      tilesHtml = '<div class="tiles-wrap"><div class="tiles-row">' + tiles.map(function (c) { return gameTileEl(c); }).join('') + '</div></div>';
     }
 
     var meldsHtml = (p.melds && p.melds.length)
-      ? '<div class="you-melds" style="margin-top:6px;">' + renderMeldsHtml(p.melds, seat) + '</div>'
+      ? '<div class="you-melds" style="margin-top:6px;">' + renderMeldsHtml(p.melds, seat, null, gameTileEl) + '</div>'
       : '';
 
     var waitHtml = '';
