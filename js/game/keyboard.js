@@ -37,6 +37,17 @@ function handleKeyDown(e) {
     return;
   }
 
+  if (G.pendingRonOffer) {
+    var ronKey = e.key ? e.key.toLowerCase() : '';
+    if (ronKey === 'r' || e.key === 'Escape') {
+      e.preventDefault();
+      var acceptRon = ronKey === 'r';
+      if (G.pendingRonOffer.local) resolveLocalRonAction(acceptRon);
+      else OnlineGame.respondRon(acceptRon);
+      return;
+    }
+  }
+
   if (G.processing) return;
 
   // 鳴き（ポン・チー・スルー）の選択プロンプト表示中

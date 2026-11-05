@@ -85,6 +85,38 @@ function escapeReplayText(value) {
   });
 }
 
+function ensureReplayStyles() {
+  if (document.getElementById('replayLayoutStyles')) return;
+  var style = document.createElement('style');
+  style.id = 'replayLayoutStyles';
+  style.textContent =
+    'body.replay-mode{height:100dvh;overflow:hidden;padding:0 12px;box-sizing:border-box}' +
+    'body.replay-mode>#app{height:100%;min-height:0;width:100%}' +
+    'body.replay-mode .replay-stage{height:100%;min-height:0;max-width:1180px;gap:5px;padding:6px 0;box-sizing:border-box}' +
+    'body.replay-mode .replay-stage .topbar{flex:0 0 auto}' +
+    'body.replay-mode .replay-stage .masthead{gap:0;flex:0 0 auto}' +
+    'body.replay-mode .replay-stage .masthead h1{font-size:20px}' +
+    '#replayRoot{flex:1;min-height:0;overflow:hidden}' +
+    '.replay-layout{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:6px}' +
+    '.replay-toolbar,.replay-controls{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}' +
+    '.replay-toolbar select{max-width:52%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}' +
+    '.replay-toolbar label{font-size:13px;font-weight:700;white-space:nowrap}' +
+    '.replay-table-grid{display:grid;min-height:0;grid-template-columns:minmax(0,1fr) minmax(130px,.7fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(70px,.55fr) minmax(0,1fr);grid-template-areas:". toimen ." "kamicha center shimocha" ". you .";gap:6px;align-items:stretch}' +
+    '.replay-seat{min-width:0;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--surface-alt);display:flex;flex-direction:column;gap:3px}' +
+    '.replay-seat-toimen{grid-area:toimen}.replay-seat-kamicha{grid-area:kamicha}.replay-seat-shimocha{grid-area:shimocha}.replay-seat-you{grid-area:you}' +
+    '.replay-seat-head{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.replay-strip{display:flex;align-items:flex-end;gap:2px;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}' +
+    '.replay-strip .tile{font-size:clamp(15px,2.4vw,25px);padding:1px;flex:0 0 auto}' +
+    '.replay-river-label{font-size:10px;color:var(--ink-soft)}.replay-melds{min-height:0;overflow:hidden}.replay-melds .meld-group{padding:1px 2px;gap:1px}.replay-melds .meld-group .tile{font-size:16px}' +
+    '.replay-center{grid-area:center;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;font-size:12px;color:var(--ink-soft);overflow:hidden}' +
+    '.replay-center .tile{font-size:clamp(18px,3vw,28px);padding:1px}' +
+    '.replay-center-event{max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;color:var(--ink)}' +
+    '.replay-outcome{font-weight:800;color:var(--ink)}' +
+    '.replay-controls button{padding:8px 16px}.replay-progress{font-size:12px;font-weight:700;white-space:nowrap}' +
+    '@media(max-width:600px){body.replay-mode{padding:0 5px}.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(48px,.45fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(56px,.52fr) minmax(0,1fr);gap:3px}.replay-seat{padding:3px;border-radius:7px;gap:2px}.replay-seat-head{font-size:10px}.replay-strip .tile{font-size:clamp(13px,4vw,18px);padding:0}.replay-river-label{font-size:9px}.replay-melds .meld-group .tile{font-size:12px}.replay-center{font-size:10px;gap:2px}.replay-center .tile{font-size:clamp(15px,4vw,20px)}.replay-controls button{padding:7px 12px}.replay-toolbar select{max-width:48%;font-size:12px}.replay-toolbar label{font-size:11px}}';
+  document.head.appendChild(style);
+}
+
 function openLastReplay() {
   var replay = loadLastReplay();
   if (!replay) return;
@@ -92,14 +124,16 @@ function openLastReplay() {
     window.removeEventListener('keydown', window._tgKeyHandler);
     window._tgKeyHandler = null;
   }
+  ensureReplayStyles();
+  document.body.classList.add('replay-mode');
   if (!appEl) appEl = document.getElementById('app');
   appEl.innerHTML = shellHtml('MATCH REPLAY', '前回の対局をリプレイ', 'replayRoot');
+  var stage = appEl.querySelector('.stage');
+  if (stage) stage.classList.add('replay-stage');
   wireBack();
   var frames = [];
   replay.rounds.forEach(function (round) {
-    (round.frames || []).forEach(function (frame, index) {
-      frames.push({ round: round, frame: frame, step: index });
-    });
+    (round.frames || []).forEach(function (frame, index) { frames.push({ round: round, frame: frame, step: index }); });
   });
   if (!frames.length) return;
   var cursor = 0;
@@ -107,68 +141,66 @@ function openLastReplay() {
   var seats = ['you', 'p2', 'p3', 'p4'];
   var viewerIndex = seats.indexOf(replay.viewerSeat);
   if (viewerIndex < 0) viewerIndex = 0;
-  var displayOrder = [0, 1, 2, 3].map(function (offset) { return seats[(viewerIndex + offset) % 4]; });
+  var seatByPosition = {
+    you: seats[viewerIndex],
+    shimocha: seats[(viewerIndex + 1) % 4],
+    toimen: seats[(viewerIndex + 2) % 4],
+    kamicha: seats[(viewerIndex + 3) % 4]
+  };
 
   function seatLabel(seat) {
     if (seat === replay.viewerSeat) return 'あなた';
-    return escapeReplayText(replay.names[seat] || SEAT_NAME[seat] || seat);
+    return escapeReplayText((replay.names || {})[seat] || SEAT_NAME[seat] || seat);
   }
   function replayTile(code, frame) {
-    var isDora = (frame.dora || []).some(function (indicator) {
-      return isSameTileType(code, nextTile(indicator));
-    });
+    var isDora = (frame.dora || []).some(function (indicator) { return isSameTileType(code, nextTile(indicator)); });
     return tileEl(code, isDora ? 'dora-tile' : '');
+  }
+  function seatHtml(position, frame) {
+    var seat = seatByPosition[position];
+    var hand = frame.hands[seat] || [];
+    var handHtml = showAllHands || seat === replay.viewerSeat
+      ? sortTiles(hand).map(function (tile) { return replayTile(tile, frame); }).join('')
+      : '<span style="color:var(--ink-soft);font-size:11px;">手牌 ' + hand.length + '枚</span>';
+    var meldHtml = (frame.melds[seat] || []).length
+      ? '<div class="replay-melds">' + renderMeldsHtml(frame.melds[seat], seat, 'compact', function (tile) { return replayTile(tile, frame); }) + '</div>' : '';
+    var riverHtml = (frame.rivers[seat] || []).map(function (tile) { return replayTile(tile, frame); }).join('');
+    var score = Number(frame.scores[seat] || 0).toLocaleString();
+    return '<section class="replay-seat replay-seat-' + position + '">' +
+      '<div class="replay-seat-head">' + seatLabel(seat) + ' ' + escapeReplayText(frame.winds[seat] || '') + '家' +
+      (frame.dealer === seat ? ' 親' : '') + (frame.riichi[seat] ? ' リーチ' : '') +
+      (frame.turn === seat && !frame.gameOver ? ' 手番' : '') + ' · ' + score + '点</div>' +
+      '<div class="replay-strip" aria-label="' + seatLabel(seat) + 'の手牌">' + handHtml + '</div>' + meldHtml +
+      '<div class="replay-river-label">捨て牌</div><div class="replay-strip" aria-label="' + seatLabel(seat) + 'の捨て牌">' + riverHtml + '</div></section>';
   }
   function draw() {
     var item = frames[cursor];
     var frame = item.frame;
-    var roundButtons = replay.rounds.map(function (round) {
-      var target = frames.findIndex(function (entry) { return entry.round.index === round.index; });
-      return '<button class="btn-secondary" data-replay-round="' + target + '"' +
-        (round.index === item.round.index ? ' style="border-color:var(--accent);"' : '') + '>' + escapeReplayText(round.title) + '</button>';
+    var roundOptions = replay.rounds.map(function (round, index) {
+      return '<option value="' + index + '"' + (round.index === item.round.index ? ' selected' : '') + '>' + escapeReplayText(round.title) + '</option>';
     }).join('');
-    var seatsHtml = displayOrder.map(function (seat) {
-      var hand = frame.hands[seat] || [];
-      var revealHand = showAllHands || seat === replay.viewerSeat;
-      var handHtml = revealHand
-        ? sortTiles(hand).map(function (tile) { return replayTile(tile, frame); }).join('')
-        : '<span style="color:var(--ink-soft);">手牌 ' + hand.length + '枚（非表示）</span>';
-      var meldHtml = (frame.melds[seat] || []).length
-        ? '<div class="you-melds" style="margin-top:6px;">' + renderMeldsHtml(frame.melds[seat], seat, null,
-          function (tile) { return replayTile(tile, frame); }) + '</div>' : '';
-      var riverHtml = (frame.rivers[seat] || []).map(function (tile) { return replayTile(tile, frame); }).join('');
-      return '<div style="border:1px solid var(--line); border-radius:10px; padding:10px; margin-top:10px;">' +
-        '<div style="font-weight:700; margin-bottom:6px;">' + seatLabel(seat) + ' · ' + escapeReplayText(frame.winds[seat] || '') + '家' +
-        (frame.dealer === seat ? ' · 親' : '') + (frame.riichi[seat] ? ' · リーチ' : '') +
-        (frame.turn === seat && !frame.gameOver ? ' · 手番' : '') +
-        ' · ' + Number(frame.scores[seat] || 0).toLocaleString() + '点</div>' +
-        '<div class="tiles-wrap"><div class="tiles-row">' + handHtml + '</div></div>' + meldHtml +
-        '<div style="font-size:12px; color:var(--ink-soft); margin-top:8px;">捨て牌</div>' +
-        '<div class="tiles-wrap"><div class="tiles-row">' + riverHtml + '</div></div></div>';
-    }).join('');
-    var indicatorHtml = (frame.dora || []).map(function (tile) { return tileEl(tile); }).join('');
-    var outcomeLabels = { user_dealin: '放銃', opp_tsumo: 'ツモ', other_ron: 'ロン',
-      ryuukyoku: '流局', user_ron: 'ロン', user_tsumo: 'ツモ' };
+    var outcomeLabels = { user_dealin: '放銃', opp_tsumo: 'ツモ', other_ron: 'ロン', ryuukyoku: '流局', user_ron: 'ロン', user_tsumo: 'ツモ' };
     var outcomeHtml = frame.gameOver && frame.outcome
-      ? '<div style="font-weight:700; margin:8px 0;">局終了: ' +
-        escapeReplayText(outcomeLabels[frame.outcome.type] || frame.outcome.type) +
+      ? '<div class="replay-outcome">' + escapeReplayText(outcomeLabels[frame.outcome.type] || frame.outcome.type) +
         (frame.outcome.winner ? ' · ' + seatLabel(frame.outcome.winner) : '') +
-        (frame.outcome.tile ? ' · 和了牌 ' + tileEl(frame.outcome.tile) : '') + '</div>' : '';
+        (frame.outcome.tile ? ' · ' + tileEl(frame.outcome.tile) : '') + '</div>' : '';
+    var doraHtml = (frame.dora || []).map(function (tile) { return tileEl(tile); }).join('');
+    var centerEvent = '<div class="replay-center-event">' + escapeReplayText(frame.event) + '</div>' + outcomeHtml;
     var root = document.getElementById('replayRoot');
-    root.innerHTML = '<div class="card">' +
-      '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">' + roundButtons + '</div>' +
-      '<div style="font-weight:700;">' + escapeReplayText(item.round.title) + ' · 場面 ' + (item.step + 1) + '/' + item.round.frames.length + '</div>' +
-      '<div style="margin:6px 0;">' + escapeReplayText(frame.event) + '</div>' +
-      outcomeHtml +
-      '<div style="font-size:12px;">残り牌: ' + frame.remaining + '枚 · ドラ表示牌 ' + indicatorHtml + '</div>' +
-      '<div style="margin-top:12px;"><label><input type="checkbox" id="replayShowAll"' + (showAllHands ? ' checked' : '') + '> 全員の手牌を見る</label></div>' +
-      seatsHtml +
-      '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">' +
-      '<button class="btn-secondary" id="replayPrev"' + (cursor === 0 ? ' disabled' : '') + '>← 前へ</button>' +
-      '<button class="btn-main" id="replayNext"' + (cursor === frames.length - 1 ? ' disabled' : '') + '>次へ →</button>' +
-      '<span style="align-self:center; font-size:12px;">' + (cursor + 1) + ' / ' + frames.length + '</span></div></div>';
-    root.querySelectorAll('[data-replay-round]').forEach(function (button) {
-      button.addEventListener('click', function () { cursor = Number(button.getAttribute('data-replay-round')); draw(); });
+    root.innerHTML = '<div class="replay-layout">' +
+      '<div class="replay-toolbar"><select id="replayRoundSelect" aria-label="局を選択">' + roundOptions + '</select>' +
+      '<label><input type="checkbox" id="replayShowAll"' + (showAllHands ? ' checked' : '') + '> 全員の手牌</label></div>' +
+      '<div class="replay-table-grid">' + seatHtml('toimen', frame) + seatHtml('kamicha', frame) +
+      '<div class="replay-center"><strong>' + escapeReplayText(item.round.title) + ' · ' + (item.step + 1) + '/' + item.round.frames.length + '</strong>' +
+      '<span>残り ' + frame.remaining + '枚</span><div>ドラ表示 ' + doraHtml + '</div>' + centerEvent + '</div>' +
+      seatHtml('shimocha', frame) + seatHtml('you', frame) + '</div>' +
+      '<div class="replay-controls"><button class="btn-secondary" id="replayPrev"' + (cursor === 0 ? ' disabled' : '') + '>← 前へ</button>' +
+      '<span class="replay-progress">' + (cursor + 1) + ' / ' + frames.length + '</span>' +
+      '<button class="btn-main" id="replayNext"' + (cursor === frames.length - 1 ? ' disabled' : '') + '>次へ →</button></div></div>';
+    document.getElementById('replayRoundSelect').addEventListener('change', function () {
+      var selectedRound = replay.rounds[Number(this.value)];
+      var target = frames.findIndex(function (entry) { return entry.round.index === selectedRound.index; });
+      if (target >= 0) { cursor = target; draw(); }
     });
     document.getElementById('replayShowAll').addEventListener('change', function () { showAllHands = this.checked; draw(); });
     document.getElementById('replayPrev').addEventListener('click', function () { if (cursor > 0) { cursor--; draw(); } });
@@ -187,6 +219,7 @@ function wireBack() {
   var backBtn = document.getElementById('backHome');
   if (backBtn) {
     backBtn.addEventListener('click', function () {
+      document.body.classList.remove('replay-mode');
       if (window._tgKeyHandler) {
         window.removeEventListener('keydown', window._tgKeyHandler);
         window._tgKeyHandler = null;
