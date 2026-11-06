@@ -37,7 +37,7 @@ function captureReplaySnapshot(eventText) {
     dora: (G.doraIndicators || (G.doraIndicator ? [G.doraIndicator] : [])).slice(),
     scores: Object.assign({}, matchState.scores),
     remaining: poolTotal(G.pool),
-    hands: {}, rivers: {}, melds: {}, riichi: {}, winds: {},
+    hands: {}, rivers: {}, melds: {}, riichi: {}, riichiTurns: {}, winds: {},
     drawSeat: G.replayDrawSeat || null,
     drawTile: G.replayDrawTile || null,
     gameOver: !!G.gameOver,
@@ -51,6 +51,7 @@ function captureReplaySnapshot(eventText) {
     frame.rivers[seat] = p.river.slice();
     frame.melds[seat] = JSON.parse(JSON.stringify(p.melds || []));
     frame.riichi[seat] = !!p.riichi;
+    frame.riichiTurns[seat] = Number.isFinite(p.riichiTurn) ? p.riichiTurn : null;
     frame.winds[seat] = G.seatWind[seat];
   });
   var previous = round.frames[round.frames.length - 1];
@@ -125,7 +126,8 @@ function ensureResponsiveStyles() {
     '.replay-hand-strip{overflow:visible}.replay-hand-row{display:flex;align-items:flex-end;justify-content:center;gap:0;width:100%;min-width:0;overflow:visible}.replay-concealed-hand{display:flex;align-items:flex-end;justify-content:center;min-width:0;flex:1 1 auto;overflow:visible}.replay-concealed-hand .tile{flex:1 1 0;min-width:0;max-width:clamp(22px,5.2vw,42px);font-size:clamp(12px,2.8vw,24px);padding:0}.replay-drawn-tile{flex:0 0 auto;margin-left:clamp(4px,1vw,12px)}.replay-drawn-tile .tile{font-size:clamp(13px,3vw,25px);padding:0}.replay-draw-separator{width:clamp(3px,0.7vw,8px);height:75%;margin-left:clamp(3px,0.8vw,8px);border-left:1px solid var(--line)}.replay-seat-kamicha .replay-hand-row,.replay-seat-shimocha .replay-hand-row{align-items:center}.replay-seat-kamicha .replay-concealed-hand,.replay-seat-shimocha .replay-concealed-hand{gap:0}.replay-seat-kamicha .replay-concealed-hand .tile,.replay-seat-shimocha .replay-concealed-hand .tile{font-size:clamp(10px,2vw,17px);max-width:clamp(16px,3vw,28px)}' +
     '@media(min-width:601px){.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(90px,.34fr) minmax(0,1fr);grid-template-rows:minmax(0,auto) minmax(64px,.45fr) minmax(0,auto);grid-template-areas:"toimen toimen toimen" "kamicha center shimocha" "you you you"}.replay-seat-toimen .replay-concealed-hand .tile,.replay-seat-you .replay-concealed-hand .tile{font-size:clamp(14px,2.2vw,25px)}}' +
     '@media(max-width:600px) and (orientation:portrait){body.replay-mode{overflow-x:hidden}.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(64px,.35fr) minmax(0,1fr);grid-template-rows:minmax(0,auto) minmax(48px,.4fr) minmax(0,auto);grid-template-areas:"toimen toimen toimen" "kamicha center shimocha" "you you you";min-height:0}.replay-seat{overflow:hidden}.replay-seat-toimen .replay-concealed-hand .tile,.replay-seat-you .replay-concealed-hand .tile{font-size:clamp(10px,5.2vw,20px)}.replay-drawn-tile .tile{font-size:clamp(11px,5.4vw,21px)}.replay-seat-kamicha .replay-concealed-hand .tile,.replay-seat-shimocha .replay-concealed-hand .tile{font-size:clamp(9px,3.2vw,15px)}}' +
-    '@media(max-height:500px) and (orientation:landscape){.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(70px,.34fr) minmax(0,1fr);grid-template-rows:minmax(0,auto) minmax(42px,.3fr) minmax(0,auto);grid-template-areas:"toimen toimen toimen" "kamicha center shimocha" "you you you"}.replay-seat-toimen .replay-concealed-hand .tile,.replay-seat-you .replay-concealed-hand .tile{font-size:clamp(10px,3.6vh,18px)}.replay-drawn-tile .tile{font-size:clamp(11px,3.8vh,19px)}.replay-seat-kamicha .replay-concealed-hand .tile,.replay-seat-shimocha .replay-concealed-hand .tile{font-size:clamp(8px,2.4vh,13px)}}';
+    '@media(max-height:500px) and (orientation:landscape){.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(70px,.34fr) minmax(0,1fr);grid-template-rows:minmax(0,auto) minmax(42px,.3fr) minmax(0,auto);grid-template-areas:"toimen toimen toimen" "kamicha center shimocha" "you you you"}.replay-seat-toimen .replay-concealed-hand .tile,.replay-seat-you .replay-concealed-hand .tile{font-size:clamp(10px,3.6vh,18px)}.replay-drawn-tile .tile{font-size:clamp(11px,3.8vh,19px)}.replay-seat-kamicha .replay-concealed-hand .tile,.replay-seat-shimocha .replay-concealed-hand .tile{font-size:clamp(8px,2.4vh,13px)}}' +
+    '.replay-layout{grid-template-rows:auto auto auto;align-content:start}.replay-table-grid{grid-template-rows:auto auto auto;align-content:start}.replay-drawn-tile{display:flex;align-items:flex-end;gap:2px}.replay-draw-label{font-size:9px;line-height:1;color:var(--ink-soft);writing-mode:vertical-rl}.replay-river{overflow-y:visible;padding:3px 0}.replay-river .tile.riichi-tile{transform:rotate(90deg);margin:0 7px;border-color:#ff3b30!important;background:rgba(255,59,48,.08);box-shadow:0 0 0 2px #ff3b30,0 2px 10px rgba(255,59,48,.4);position:relative;z-index:2}.replay-river .tile.latest{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),0 2px 6px -1px rgba(0,0,0,.25)}';
   document.head.appendChild(style);
 }
 
@@ -209,13 +211,37 @@ function openLastReplay() {
   }
   function drawInfoForFrame(frameIndex) { return inferDrawForFrame(frameIndex); }
 
+  var inferredRiichiTiles = {};
+  function riichiIndexForFrame(frameIndex, seat) {
+    var key = frameIndex + ':' + seat;
+    if (Object.prototype.hasOwnProperty.call(inferredRiichiTiles, key)) return inferredRiichiTiles[key];
+    var current = frames[frameIndex] && frames[frameIndex].frame;
+    if (!current || !current.riichi || !current.riichi[seat]) return inferredRiichiTiles[key] = null;
+    var storedTurn = current.riichiTurns && current.riichiTurns[seat];
+    if (Number.isFinite(storedTurn) && storedTurn > 0) return inferredRiichiTiles[key] = storedTurn - 1;
+    var currentRound = frames[frameIndex].round.index;
+    for (var i = frameIndex; i > 0; i--) {
+      if (frames[i].round.index !== currentRound || frames[i - 1].round.index !== currentRound) break;
+      var candidate = frames[i].frame;
+      var previous = frames[i - 1].frame;
+      if (candidate.riichi && candidate.riichi[seat] && !(previous.riichi && previous.riichi[seat])) {
+        var river = candidate.rivers && candidate.rivers[seat] || [];
+        return inferredRiichiTiles[key] = river.length ? river.length - 1 : null;
+      }
+    }
+    return inferredRiichiTiles[key] = null;
+  }
+
   function seatLabel(seat) {
     if (seat === replay.viewerSeat) return 'あなた';
     return escapeReplayText((replay.names || {})[seat] || SEAT_NAME[seat] || seat);
   }
-  function replayTile(code, frame) {
+  function replayTile(code, frame, extraClass) {
     var isDora = (frame.dora || []).some(function (indicator) { return isSameTileType(code, nextTile(indicator)); });
-    return tileEl(code, isDora ? 'dora-tile' : '');
+    var classes = [];
+    if (isDora) classes.push('dora-tile');
+    if (extraClass) classes.push(extraClass);
+    return tileEl(code, classes.join(' '));
   }
   function seatHtml(position, frame, frameIndex) {
     var seat = seatByPosition[position];
@@ -230,18 +256,21 @@ function openLastReplay() {
     }
     var handHtml = showAllHands || seat === replay.viewerSeat
       ? '<div class="replay-hand-row"><div class="replay-concealed-hand">' + sortTiles(concealedHand).map(function (tile) { return replayTile(tile, frame); }).join('') + '</div>' +
-        (drawnTile ? '<span class="replay-draw-separator" aria-hidden="true"></span><div class="replay-drawn-tile">' + replayTile(drawnTile, frame) + '</div>' : '') + '</div>'
+        (drawnTile ? '<span class="replay-draw-separator" aria-hidden="true"></span><div class="replay-drawn-tile"><span class="replay-draw-label">ツモ</span>' + replayTile(drawnTile, frame) + '</div>' : '') + '</div>'
       : '<span style="color:var(--ink-soft);font-size:11px;">手牌 ' + hand.length + '枚</span>';
     var meldHtml = (frame.melds[seat] || []).length
       ? '<div class="replay-melds">' + renderMeldsHtml(frame.melds[seat], seat, 'compact', function (tile) { return replayTile(tile, frame); }) + '</div>' : '';
-    var riverHtml = (frame.rivers[seat] || []).map(function (tile) { return replayTile(tile, frame); }).join('');
+    var riichiIndex = riichiIndexForFrame(frameIndex, seat);
+    var riverHtml = (frame.rivers[seat] || []).map(function (tile, index) {
+      return replayTile(tile, frame, index === riichiIndex ? 'riichi-tile' : '');
+    }).join('');
     var score = Number(frame.scores[seat] || 0).toLocaleString();
     return '<section class="replay-seat replay-seat-' + position + '">' +
       '<div class="replay-seat-head">' + seatLabel(seat) + ' ' + escapeReplayText(frame.winds[seat] || '') + '家' +
       (frame.dealer === seat ? ' 親' : '') + (frame.riichi[seat] ? ' リーチ' : '') +
       (frame.turn === seat && !frame.gameOver ? ' 手番' : '') + ' · ' + score + '点</div>' +
       '<div class="replay-strip replay-hand-strip" aria-label="' + seatLabel(seat) + 'の手牌">' + handHtml + '</div>' + meldHtml +
-      '<div class="replay-river-label">捨て牌</div><div class="replay-strip" aria-label="' + seatLabel(seat) + 'の捨て牌">' + riverHtml + '</div></section>';
+      '<div class="replay-river-label">捨て牌</div><div class="replay-strip replay-river" aria-label="' + seatLabel(seat) + 'の捨て牌">' + riverHtml + '</div></section>';
   }
   function draw() {
     var item = frames[cursor];
