@@ -236,6 +236,7 @@ function newGame() {
       dealerSeat: dealerSeat, seatWind: seatWind, kyokuWind: kyokuWind, kyokuNumber: kyokuNumber, honba: honba,
       currentTurnSeat: dealerSeat,
       processing: !isYouDealer, gameOver: false, outcome: null, justDrew: isYouDealer,
+      replayDrawSeat: dealerSeat, replayDrawTile: firstDrawn,
       firstTurnUninterrupted: true, firstTsumoSeat: dealerSeat, firstTsumoAvailable: true, firstDrawWindowSeat: null,
       lastDrawWasLastLiveTile: false, lastDrawWasRinshan: false, lastDiscardWasLastLiveTile: false,
       pendingCall: null, pendingCallIndex: null, pendingOpponentQueue: [], revealExpanded: false, lastDiscardSeat: null, lastTileClick: null,
@@ -363,6 +364,7 @@ function newGame() {
     tenpaiSeats: tenpaiSeats, lastDrawn: lastDrawn, selected: null, selectedIndex: null, log: log,
     dealerSeat: dealerSeat, seatWind: seatWind, kyokuWind: kyokuWindTraining, kyokuNumber: kyokuNumberTraining,
     processing: false, gameOver: false, outcome: null, justDrew: true,
+    replayDrawSeat: 'you', replayDrawTile: lastDrawn,
     firstTurnUninterrupted: false, firstTsumoSeat: null, firstTsumoAvailable: false, firstDrawWindowSeat: null,
     lastDrawWasLastLiveTile: false, lastDrawWasRinshan: false, lastDiscardWasLastLiveTile: false,
     pendingCall: null, pendingCallIndex: null, pendingOpponentQueue: [], revealExpanded: false, lastDiscardSeat: null, lastTileClick: null

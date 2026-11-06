@@ -38,6 +38,8 @@ function captureReplaySnapshot(eventText) {
     scores: Object.assign({}, matchState.scores),
     remaining: poolTotal(G.pool),
     hands: {}, rivers: {}, melds: {}, riichi: {}, winds: {},
+    drawSeat: G.replayDrawSeat || null,
+    drawTile: G.replayDrawTile || null,
     gameOver: !!G.gameOver,
     outcome: G.outcome ? { type: G.outcome.type, tile: G.outcome.tile || null,
       winner: G.outcome.type === 'user_ron' || G.outcome.type === 'user_tsumo' ? 'you' :
@@ -119,7 +121,11 @@ function ensureResponsiveStyles() {
     '@media(max-height:500px) and (orientation:landscape){body.game-mode{height:100dvh;min-height:0;overflow:hidden;padding:2px 6px;box-sizing:border-box}body.game-mode>#app{height:100%;min-height:0;width:100%}.game-mode .stage{height:100%;min-height:0;max-width:none;gap:3px}.game-mode .topbar .back-link{font-size:11px}.game-mode .masthead{gap:0}.game-mode .masthead .eyebrow{display:none}.game-mode .masthead h1{font-size:16px}.game-mode #tgRoot{flex:1;min-height:0;overflow:hidden}.game-mode #tgRoot>.card{height:100%;min-height:0;padding:5px;gap:4px;border-radius:9px;overflow:hidden}.game-mode .settings-row{font-size:10px}.game-mode .settings-row span{padding:2px 7px!important;font-size:10px!important}.game-mode .table-grid{flex:1;min-height:0;grid-template-columns:minmax(0,1fr) minmax(100px,.7fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);gap:3px}.game-mode .opp-block{padding:3px 4px;gap:2px;border-radius:7px}.game-mode .opp-head{font-size:9px;gap:2px}.game-mode .badge-oya,.game-mode .badge-wind,.game-mode .badge-riichi{font-size:9px;padding:1px 4px}.game-mode .opp-river{grid-template-columns:repeat(9,minmax(0,1fr));gap:0;min-height:0}.game-mode .opp-river .tile{font-size:clamp(12px,3.7vh,17px);padding:0;line-height:1}.game-mode .opp-river .tile.riichi-tile{margin:0 2px}.game-mode .seat-center{font-size:9px;gap:1px;padding:1px 0}.game-mode .seat-center .kyoku-line{font-size:14px}.game-mode .seat-center .dora-mini{gap:1px;flex-wrap:wrap;justify-content:center}.game-mode .seat-center .dora-mini .tile{font-size:16px}.game-mode .seat-center .wall-row{display:none}.game-mode .you-block{gap:2px;padding-top:3px}.game-mode .you-head{gap:2px}.game-mode .you-melds{flex-wrap:nowrap;overflow-x:auto;gap:3px}.game-mode .meld-group{padding:1px 2px;gap:1px}.game-mode .meld-group .tile{font-size:16px}.game-mode .meld-col.horizontal{width:21px;height:16px}.game-mode .meld-col.horizontal.kakan{height:31px}.game-mode .hand-row{flex-wrap:nowrap;overflow-x:auto;gap:1px;padding:2px 1px 4px;scrollbar-width:thin}.game-mode .hand-row .tile{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:26px;min-height:31px;font-size:clamp(18px,4vh,25px);padding:0}.game-mode .hand-row .tile.drawn{margin-left:5px}.game-mode .legend-row{display:none}.game-mode .tg-controls{gap:4px}.game-mode .tg-controls button{min-height:34px;padding:5px 8px;font-size:12px;flex:0 1 auto}.game-mode .call-prompt{padding:5px 8px;gap:4px}.game-mode .call-prompt-title{font-size:11px}.game-mode .call-prompt .tg-controls button{min-height:32px}.game-mode .ron-kb-guide{display:none}.game-mode .processing-note{padding:2px;font-size:11px}.game-mode.game-over-mode #tgRoot>.card{overflow-y:auto}.game-mode.game-over-mode #tgRoot>.card .table-grid{flex:none}.game-mode.game-over-mode #tgRoot>.card .reveal-box{padding:8px;gap:5px}.game-mode.game-over-mode #tgRoot>.card .score-total{font-size:17px}}' +
     '@media(max-width:600px) and (orientation:portrait){body.replay-mode{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:auto;padding:0 5px}body.replay-mode>#app{height:auto;min-height:100dvh}.replay-stage{height:auto!important;min-height:100dvh!important}#replayRoot{flex:initial;overflow:visible}.replay-layout{height:auto;min-height:0}.replay-table-grid{min-height:450px}}' +
     '@media(max-height:500px) and (orientation:landscape){body.replay-mode{padding:0 6px}.replay-stage{gap:2px;padding:2px 0}.replay-stage .topbar .back-link{font-size:11px}.replay-stage .masthead h1{font-size:16px}.replay-toolbar select{padding:3px 6px;font-size:11px}.replay-toolbar label{font-size:10px}.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(90px,.45fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(42px,.32fr) minmax(0,1fr);gap:3px}.replay-seat{padding:3px;gap:1px;border-radius:6px}.replay-seat-head{font-size:9px}.replay-strip .tile{font-size:clamp(12px,3.7vh,17px);padding:0}.replay-river-label{font-size:8px}.replay-melds .meld-group .tile{font-size:11px}.replay-center{font-size:9px;gap:1px}.replay-center .tile{font-size:clamp(14px,4vh,19px)}.replay-center-event{-webkit-line-clamp:2}.replay-controls button{padding:4px 10px;font-size:12px}.replay-progress{font-size:10px}}' +
-    '@media(max-width:600px) and (orientation:portrait){body.replay-mode{padding:0 5px}.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(90px,.7fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(56px,.52fr) minmax(0,1fr);gap:3px}.replay-seat{padding:3px;border-radius:7px;gap:2px}.replay-seat-head{font-size:10px}.replay-strip .tile{font-size:clamp(13px,4vw,18px);padding:0}.replay-river-label{font-size:9px}.replay-melds .meld-group .tile{font-size:12px}.replay-center{font-size:10px;gap:2px}.replay-center .tile{font-size:clamp(15px,4vw,20px)}.replay-controls button{padding:7px 12px}.replay-toolbar select{max-width:48%;font-size:12px}.replay-toolbar label{font-size:11px}}';
+    '@media(max-width:600px) and (orientation:portrait){body.replay-mode{padding:0 5px}.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(90px,.7fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(56px,.52fr) minmax(0,1fr);gap:3px}.replay-seat{padding:3px;border-radius:7px;gap:2px}.replay-seat-head{font-size:10px}.replay-strip .tile{font-size:clamp(13px,4vw,18px);padding:0}.replay-river-label{font-size:9px}.replay-melds .meld-group .tile{font-size:12px}.replay-center{font-size:10px;gap:2px}.replay-center .tile{font-size:clamp(15px,4vw,20px)}.replay-controls button{padding:7px 12px}.replay-toolbar select{max-width:48%;font-size:12px}.replay-toolbar label{font-size:11px}}' +
+    '.replay-hand-strip{overflow:visible}.replay-hand-row{display:flex;align-items:flex-end;justify-content:center;gap:0;width:100%;min-width:0;overflow:visible}.replay-concealed-hand{display:flex;align-items:flex-end;justify-content:center;min-width:0;flex:1 1 auto;overflow:visible}.replay-concealed-hand .tile{flex:1 1 0;min-width:0;max-width:clamp(22px,5.2vw,42px);font-size:clamp(12px,2.8vw,24px);padding:0}.replay-drawn-tile{flex:0 0 auto;margin-left:clamp(4px,1vw,12px)}.replay-drawn-tile .tile{font-size:clamp(13px,3vw,25px);padding:0}.replay-draw-separator{width:clamp(3px,0.7vw,8px);height:75%;margin-left:clamp(3px,0.8vw,8px);border-left:1px solid var(--line)}.replay-seat-kamicha .replay-hand-row,.replay-seat-shimocha .replay-hand-row{align-items:center}.replay-seat-kamicha .replay-concealed-hand,.replay-seat-shimocha .replay-concealed-hand{gap:0}.replay-seat-kamicha .replay-concealed-hand .tile,.replay-seat-shimocha .replay-concealed-hand .tile{font-size:clamp(10px,2vw,17px);max-width:clamp(16px,3vw,28px)}' +
+    '@media(min-width:601px){.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(90px,.34fr) minmax(0,1fr);grid-template-rows:minmax(0,auto) minmax(64px,.45fr) minmax(0,auto);grid-template-areas:"toimen toimen toimen" "kamicha center shimocha" "you you you"}.replay-seat-toimen .replay-concealed-hand .tile,.replay-seat-you .replay-concealed-hand .tile{font-size:clamp(14px,2.2vw,25px)}}' +
+    '@media(max-width:600px) and (orientation:portrait){body.replay-mode{overflow-x:hidden}.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(64px,.35fr) minmax(0,1fr);grid-template-rows:minmax(0,auto) minmax(48px,.4fr) minmax(0,auto);grid-template-areas:"toimen toimen toimen" "kamicha center shimocha" "you you you";min-height:0}.replay-seat{overflow:hidden}.replay-seat-toimen .replay-concealed-hand .tile,.replay-seat-you .replay-concealed-hand .tile{font-size:clamp(10px,5.2vw,20px)}.replay-drawn-tile .tile{font-size:clamp(11px,5.4vw,21px)}.replay-seat-kamicha .replay-concealed-hand .tile,.replay-seat-shimocha .replay-concealed-hand .tile{font-size:clamp(9px,3.2vw,15px)}}' +
+    '@media(max-height:500px) and (orientation:landscape){.replay-table-grid{grid-template-columns:minmax(0,1fr) minmax(70px,.34fr) minmax(0,1fr);grid-template-rows:minmax(0,auto) minmax(42px,.3fr) minmax(0,auto);grid-template-areas:"toimen toimen toimen" "kamicha center shimocha" "you you you"}.replay-seat-toimen .replay-concealed-hand .tile,.replay-seat-you .replay-concealed-hand .tile{font-size:clamp(10px,3.6vh,18px)}.replay-drawn-tile .tile{font-size:clamp(11px,3.8vh,19px)}.replay-seat-kamicha .replay-concealed-hand .tile,.replay-seat-shimocha .replay-concealed-hand .tile{font-size:clamp(8px,2.4vh,13px)}}';
   document.head.appendChild(style);
 }
 
@@ -129,6 +135,10 @@ function openLastReplay() {
   if (window._tgKeyHandler) {
     window.removeEventListener('keydown', window._tgKeyHandler);
     window._tgKeyHandler = null;
+  }
+  if (window._replayKeyHandler) {
+    window.removeEventListener('keydown', window._replayKeyHandler);
+    window._replayKeyHandler = null;
   }
   ensureResponsiveStyles();
   document.body.classList.remove('game-mode', 'game-over-mode');
@@ -145,6 +155,12 @@ function openLastReplay() {
   if (!frames.length) return;
   var cursor = 0;
   var showAllHands = false;
+  function moveReplay(delta) {
+    var next = cursor + delta;
+    if (next < 0 || next >= frames.length || next === cursor) return;
+    cursor = next;
+    draw();
+  }
   var seats = ['you', 'p2', 'p3', 'p4'];
   var viewerIndex = seats.indexOf(replay.viewerSeat);
   if (viewerIndex < 0) viewerIndex = 0;
@@ -155,6 +171,44 @@ function openLastReplay() {
     kamicha: seats[(viewerIndex + 3) % 4]
   };
 
+  var inferredDraws = {};
+  function countTiles(list) {
+    var counts = {};
+    (list || []).forEach(function (tile) { counts[tile] = (counts[tile] || 0) + 1; });
+    return counts;
+  }
+  function inferDrawForFrame(frameIndex) {
+    if (Object.prototype.hasOwnProperty.call(inferredDraws, frameIndex)) return inferredDraws[frameIndex];
+    var current = frames[frameIndex] && frames[frameIndex].frame;
+    if (!current) return inferredDraws[frameIndex] = null;
+    if (current.drawSeat && current.drawTile) {
+      return inferredDraws[frameIndex] = { seat: current.drawSeat, tile: current.drawTile };
+    }
+    var previousEntry = frameIndex > 0 ? frames[frameIndex - 1] : null;
+    var previous = previousEntry && previousEntry.round.index === frames[frameIndex].round.index ? previousEntry.frame : null;
+    if (!previous) return inferredDraws[frameIndex] = null;
+    var found = null;
+    seats.forEach(function (seat) {
+      if (found || !current.hands || !previous.hands) return;
+      var before = current.hands[seat] || [];
+      var prior = previous.hands[seat] || [];
+      if (current.turn && current.turn !== seat) return;
+      if (before.length !== prior.length + 1) return;
+      var priorCounts = countTiles(prior);
+      var added = before.filter(function (tile) {
+        if (priorCounts[tile]) { priorCounts[tile]--; return false; }
+        return true;
+      });
+      if (added.length !== 1) return;
+      var priorRiver = previous.rivers && previous.rivers[seat] || [];
+      var currentRiver = current.rivers && current.rivers[seat] || [];
+      if (JSON.stringify(priorRiver) !== JSON.stringify(currentRiver)) return;
+      found = { seat: seat, tile: added[0] };
+    });
+    return inferredDraws[frameIndex] = found;
+  }
+  function drawInfoForFrame(frameIndex) { return inferDrawForFrame(frameIndex); }
+
   function seatLabel(seat) {
     if (seat === replay.viewerSeat) return 'あなた';
     return escapeReplayText((replay.names || {})[seat] || SEAT_NAME[seat] || seat);
@@ -163,11 +217,20 @@ function openLastReplay() {
     var isDora = (frame.dora || []).some(function (indicator) { return isSameTileType(code, nextTile(indicator)); });
     return tileEl(code, isDora ? 'dora-tile' : '');
   }
-  function seatHtml(position, frame) {
+  function seatHtml(position, frame, frameIndex) {
     var seat = seatByPosition[position];
     var hand = frame.hands[seat] || [];
+    var drawInfo = drawInfoForFrame(frameIndex);
+    var drawnTile = drawInfo && drawInfo.seat === seat ? drawInfo.tile : null;
+    var concealedHand = hand.slice();
+    if (drawnTile) {
+      var drawnIndex = concealedHand.indexOf(drawnTile);
+      if (drawnIndex !== -1) concealedHand.splice(drawnIndex, 1);
+      else drawnTile = null;
+    }
     var handHtml = showAllHands || seat === replay.viewerSeat
-      ? sortTiles(hand).map(function (tile) { return replayTile(tile, frame); }).join('')
+      ? '<div class="replay-hand-row"><div class="replay-concealed-hand">' + sortTiles(concealedHand).map(function (tile) { return replayTile(tile, frame); }).join('') + '</div>' +
+        (drawnTile ? '<span class="replay-draw-separator" aria-hidden="true"></span><div class="replay-drawn-tile">' + replayTile(drawnTile, frame) + '</div>' : '') + '</div>'
       : '<span style="color:var(--ink-soft);font-size:11px;">手牌 ' + hand.length + '枚</span>';
     var meldHtml = (frame.melds[seat] || []).length
       ? '<div class="replay-melds">' + renderMeldsHtml(frame.melds[seat], seat, 'compact', function (tile) { return replayTile(tile, frame); }) + '</div>' : '';
@@ -177,7 +240,7 @@ function openLastReplay() {
       '<div class="replay-seat-head">' + seatLabel(seat) + ' ' + escapeReplayText(frame.winds[seat] || '') + '家' +
       (frame.dealer === seat ? ' 親' : '') + (frame.riichi[seat] ? ' リーチ' : '') +
       (frame.turn === seat && !frame.gameOver ? ' 手番' : '') + ' · ' + score + '点</div>' +
-      '<div class="replay-strip" aria-label="' + seatLabel(seat) + 'の手牌">' + handHtml + '</div>' + meldHtml +
+      '<div class="replay-strip replay-hand-strip" aria-label="' + seatLabel(seat) + 'の手牌">' + handHtml + '</div>' + meldHtml +
       '<div class="replay-river-label">捨て牌</div><div class="replay-strip" aria-label="' + seatLabel(seat) + 'の捨て牌">' + riverHtml + '</div></section>';
   }
   function draw() {
@@ -197,10 +260,10 @@ function openLastReplay() {
     root.innerHTML = '<div class="replay-layout">' +
       '<div class="replay-toolbar"><select id="replayRoundSelect" aria-label="局を選択">' + roundOptions + '</select>' +
       '<label><input type="checkbox" id="replayShowAll"' + (showAllHands ? ' checked' : '') + '> 全員の手牌</label></div>' +
-      '<div class="replay-table-grid">' + seatHtml('toimen', frame) + seatHtml('kamicha', frame) +
+      '<div class="replay-table-grid">' + seatHtml('toimen', frame, cursor) + seatHtml('kamicha', frame, cursor) +
       '<div class="replay-center"><strong>' + escapeReplayText(item.round.title) + ' · ' + (item.step + 1) + '/' + item.round.frames.length + '</strong>' +
       '<span>残り ' + frame.remaining + '枚</span><div>ドラ表示 ' + doraHtml + '</div>' + centerEvent + '</div>' +
-      seatHtml('shimocha', frame) + seatHtml('you', frame) + '</div>' +
+      seatHtml('shimocha', frame, cursor) + seatHtml('you', frame, cursor) + '</div>' +
       '<div class="replay-controls"><button class="btn-secondary" id="replayPrev"' + (cursor === 0 ? ' disabled' : '') + '>← 前へ</button>' +
       '<span class="replay-progress">' + (cursor + 1) + ' / ' + frames.length + '</span>' +
       '<button class="btn-main" id="replayNext"' + (cursor === frames.length - 1 ? ' disabled' : '') + '>次へ →</button></div></div>';
@@ -210,9 +273,22 @@ function openLastReplay() {
       if (target >= 0) { cursor = target; draw(); }
     });
     document.getElementById('replayShowAll').addEventListener('change', function () { showAllHands = this.checked; draw(); });
-    document.getElementById('replayPrev').addEventListener('click', function () { if (cursor > 0) { cursor--; draw(); } });
-    document.getElementById('replayNext').addEventListener('click', function () { if (cursor < frames.length - 1) { cursor++; draw(); } });
+    document.getElementById('replayPrev').addEventListener('click', function () { moveReplay(-1); });
+    document.getElementById('replayNext').addEventListener('click', function () { moveReplay(1); });
   }
+  window._replayKeyHandler = function (event) {
+    var target = event.target;
+    var tag = target && target.tagName ? target.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'select' || tag === 'textarea' || (target && target.isContentEditable)) return;
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      moveReplay(1);
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      moveReplay(-1);
+    }
+  };
+  window.addEventListener('keydown', window._replayKeyHandler);
   draw();
 }
 
@@ -230,6 +306,10 @@ function wireBack() {
       if (window._tgKeyHandler) {
         window.removeEventListener('keydown', window._tgKeyHandler);
         window._tgKeyHandler = null;
+      }
+      if (window._replayKeyHandler) {
+        window.removeEventListener('keydown', window._replayKeyHandler);
+        window._replayKeyHandler = null;
       }
       if (typeof OnlinePeer !== 'undefined' && OnlinePeer.disconnect) {
         OnlinePeer.disconnect();
@@ -275,6 +355,10 @@ function wireHome() {
 
 function goHome() {
   document.body.classList.remove('game-mode', 'game-over-mode', 'replay-mode');
+  if (window._replayKeyHandler) {
+    window.removeEventListener('keydown', window._replayKeyHandler);
+    window._replayKeyHandler = null;
+  }
   if (!appEl) appEl = document.getElementById('app');
   appEl.innerHTML = homeHtml();
   wireHome();

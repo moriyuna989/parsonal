@@ -66,6 +66,8 @@ function afterUserDiscard(tileCode, viaRiichi) {
   G.selectedIndex = null;
   G.lastTileClick = null;
   G.justDrew = false;
+  G.replayDrawSeat = null;
+  G.replayDrawTile = null;
   if (!viaRiichi && G.players.you.riichi) {
     G.players.you.ippatsu = false;
   }
@@ -127,6 +129,8 @@ function executeOnlineGuestDiscard(seat, tileCode, viaRiichi, senderId) {
   recordDiscardScoringContext(seat);
   G.lastDiscardSeat = seat;
   G.justDrew = false;
+  G.replayDrawSeat = null;
+  G.replayDrawTile = null;
   p.wait = findWaitsOpen(p.hand, (p.melds || []).length);
   p.isTenpai = p.wait.length > 0;
   if (!viaRiichi && p.riichi) {

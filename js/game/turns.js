@@ -72,6 +72,8 @@ function advancePracticeTurn() {
     G.players.you.hand.push(draw);
     G.lastDrawn = draw;
     G.justDrew = true;
+    G.replayDrawSeat = 'you';
+    G.replayDrawTile = draw;
     G.processing = false;
     G.log.push('あなたは ' + tileName(draw) + ' をツモりました。');
     render();
@@ -100,6 +102,8 @@ function advancePracticeTurn() {
       clearTemporaryFuriten(seat);
       G.players[seat].hand.push(drawGuest);
       G.lastDrawn = drawGuest;
+      G.replayDrawSeat = seat;
+      G.replayDrawTile = drawGuest;
     }
     G.justDrew = true;
     G.processing = true; // ホスト側はゲストの打牌を待つ
@@ -133,6 +137,8 @@ function advancePracticeTurn() {
     clearTemporaryFuriten(seat);
   }
   if (!initialCpuDraw) p.hand.push(draw);
+  G.replayDrawSeat = seat;
+  G.replayDrawTile = draw;
   if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot(SEAT_NAME[seat] + 'が' + tileName(draw) + 'をツモりました。');
 
   if (isComplete14(p.hand)) {
@@ -175,9 +181,12 @@ function advancePracticeTurn() {
         }
         p.hand.push(rinshanCpu);
         draw = rinshanCpu;
+        G.replayDrawSeat = seat;
+        G.replayDrawTile = rinshanCpu;
         clearTemporaryFuriten(seat);
         G.lastDrawWasLastLiveTile = false;
         G.lastDrawWasRinshan = true;
+        if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot(SEAT_NAME[seat] + 'が嶺上牌 ' + tileName(rinshanCpu) + 'をツモりました。');
         break;
       }
     }
@@ -238,6 +247,8 @@ function advancePracticeTurn() {
   }
 
   p.river.push(discard);
+  G.replayDrawSeat = null;
+  G.replayDrawTile = null;
   recordDiscardScoringContext(seat);
   G.lastDiscardSeat = seat;
   if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot();
@@ -310,6 +321,8 @@ function advanceOpponentQueue() {
     G.players.you.hand.push(draw);
     G.lastDrawn = draw;
     G.justDrew = true;
+    G.replayDrawSeat = 'you';
+    G.replayDrawTile = draw;
     G.log.push('あなたは ' + tileName(draw) + ' をツモりました。');
     G.processing = false;
     render();

@@ -102,6 +102,8 @@ function executeAnkanForSeat(seat, targetTile) {
   player.hand.push(rinshan);
   G.currentTurnSeat = seat;
   G.lastDrawn = rinshan;
+  G.replayDrawSeat = seat;
+  G.replayDrawTile = rinshan;
   G.lastDrawWasLastLiveTile = false;
   G.lastDrawWasRinshan = true;
   G.lastDiscardWasLastLiveTile = false;
@@ -146,6 +148,8 @@ function executeKakanForSeat(seat, targetTile) {
     player.hand.push(rinshan);
     G.currentTurnSeat = seat;
     G.lastDrawn = rinshan;
+    G.replayDrawSeat = seat;
+    G.replayDrawTile = rinshan;
     G.lastDrawWasLastLiveTile = false;
     G.lastDrawWasRinshan = true;
     G.lastDiscardWasLastLiveTile = false;
@@ -209,6 +213,8 @@ function executeCallKan() {
   }
   G.players.you.hand.push(rinshan);
   G.lastDrawn = rinshan;
+  G.replayDrawSeat = 'you';
+  G.replayDrawTile = rinshan;
   G.lastDrawWasLastLiveTile = false;
   G.lastDrawWasRinshan = true;
   clearTemporaryFuriten('you');
