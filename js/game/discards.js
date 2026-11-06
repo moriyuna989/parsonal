@@ -56,6 +56,7 @@ function afterUserDiscard(tileCode, viaRiichi) {
     if (!findWaitsOpen(riichiHandCheck, (user.melds || []).length).length) return;
   }
   var doubleRiichi = !!viaRiichi && !!G.firstTurnUninterrupted && !G.players.you.firstDiscardDone;
+  if (typeof CpuLearning !== 'undefined' && CpuLearning.observeDiscard) CpuLearning.observeDiscard('you', tileCode);
   var idx = G.players.you.hand.indexOf(tileCode);
   G.players.you.hand.splice(idx, 1);
   G.players.you.river.push(tileCode);
@@ -117,6 +118,7 @@ function executeOnlineGuestDiscard(seat, tileCode, viaRiichi, senderId) {
     riichiHand.splice(riichiHand.indexOf(tileCode), 1);
     if (!findWaitsOpen(riichiHand, (p.melds || []).length).length) return;
   }
+  if (typeof CpuLearning !== 'undefined' && CpuLearning.observeDiscard) CpuLearning.observeDiscard(seat, tileCode);
   var idx = p.hand.indexOf(tileCode);
   if (idx !== -1) {
     p.hand.splice(idx, 1);

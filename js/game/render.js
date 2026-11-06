@@ -4,7 +4,7 @@
 function settingsRowHtml() {
   if (isPractice) {
     var cpuLevel = (matchState && matchState.cpuLevel) || 'hard';
-    var levelText = cpuLevel === 'easy' ? 'CPU: 初級' : (cpuLevel === 'normal' ? 'CPU: 中級' : 'CPU: 上級（仲林プロAI）');
+    var levelText = cpuLevel === 'easy' ? 'CPU: 初級' : (cpuLevel === 'normal' ? 'CPU: 中級' : 'CPU: 上級（仲林選手を参考にした押し引き学習）');
     return '<div class="settings-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">' +
       '<span style="font-size:12px; font-weight:700; color:var(--accent); background:var(--surface-alt); border:1px solid var(--line); border-radius:999px; padding:3px 12px;">実践編（対局モード）</span>' +
       '<span style="font-size:12px; font-weight:700; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px 10px;">' + levelText + '</span>' +

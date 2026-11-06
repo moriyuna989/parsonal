@@ -165,6 +165,7 @@ function settleScores(o) {
     matchState.scores[s] += diffs[s];
   });
   G.settleDiffs = diffs;
+  if (typeof CpuLearning !== 'undefined' && CpuLearning.finishRound) CpuLearning.finishRound(o);
 }
 window.settleScores = settleScores;
 

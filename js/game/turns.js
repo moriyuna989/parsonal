@@ -191,7 +191,7 @@ function advancePracticeTurn() {
     G.log.push(SEAT_NAME[seat] + 'が' + tileName(discard) + 'をツモ切りしました。');
   } else {
     var cpuLevel = (matchState && matchState.cpuLevel) || 'hard';
-    var tenpaiInfo = checkCpuTenpaiAndDiscard(p.hand);
+    var tenpaiInfo = checkCpuTenpaiAndDiscard(p.hand, seat, cpuLevel);
     var riichiDecision = tenpaiInfo.canTenpai ? evaluateCpuRiichiDecisionByLevel(seat, p.hand, tenpaiInfo, cpuLevel) : { shouldRiichi: false };
 
     if (tenpaiInfo.canTenpai && !p.riichi && riichiDecision.shouldRiichi) {
@@ -214,7 +214,7 @@ function advancePracticeTurn() {
       p.isTenpai = true;
       p.wait = tenpaiInfo.waits;
       if (!G.tenpaiSeats.includes(seat)) G.tenpaiSeats.push(seat);
-      var rs = riichiSeatsActive().filter(function (s) { return s !== seat; });
+      var rs = cpuLevel === 'hard' ? cpuThreatSeatsFor(seat) : riichiSeatsActive().filter(function (s) { return s !== seat; });
       if (rs.length > 0) {
         // 他家リーチがあるなら安全牌を優先して切る
         discard = chooseCpuDiscardByLevel(seat, p.hand, cpuLevel);
@@ -229,6 +229,12 @@ function advancePracticeTurn() {
       p.hand.splice(p.hand.indexOf(discard), 1);
       G.log.push(SEAT_NAME[seat] + 'が' + tileName(discard) + 'を切りました。');
     }
+  }
+
+  if (cpuLevel === 'hard' && typeof CpuLearning !== 'undefined' && CpuLearning.recordDecision) {
+    var learningCandidates = cpuBuildDiscardCandidates(seat, p.hand.concat([discard]), { includeScore: true });
+    var learningSelected = learningCandidates.find(function (candidate) { return candidate.tile === discard; });
+    if (learningSelected) CpuLearning.recordDecision(seat, learningSelected, learningCandidates);
   }
 
   p.river.push(discard);

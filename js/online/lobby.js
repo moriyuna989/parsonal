@@ -197,7 +197,7 @@ function renderLobby() {
       '<div class="settings-options" id="onlineOptCpu">' +
         '<div class="settings-option' + (OnlineGameRuntime.matchSettings.cpuLevel === 'easy' ? ' selected' : '') + '" data-val="easy">初級</div>' +
         '<div class="settings-option' + (OnlineGameRuntime.matchSettings.cpuLevel === 'normal' ? ' selected' : '') + '" data-val="normal">中級</div>' +
-        '<div class="settings-option' + (OnlineGameRuntime.matchSettings.cpuLevel === 'hard' ? ' selected' : '') + '" data-val="hard">上級（仲林プロAI）</div>' +
+        '<div class="settings-option' + (OnlineGameRuntime.matchSettings.cpuLevel === 'hard' ? ' selected' : '') + '" data-val="hard">上級（仲林選手を参考にした押し引き学習）</div>' +
       '</div>' +
     '</div>' +
     '<button class="btn-main" id="btnStartOnlineMatch" style="width:100%; margin-top:16px; padding:14px; font-size:16px;">対局を開始する（空き席はCPU）</button>';

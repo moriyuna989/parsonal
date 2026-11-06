@@ -329,7 +329,7 @@ function renderPracticeSettings() {
       '<div class="settings-options" id="optCpuLevelGroup">' +
         '<div class="settings-option' + (practiceConfig.cpuLevel === 'easy' ? ' selected' : '') + '" data-val="easy">初級<span class="opt-sub">攻撃重視・守備甘め</span></div>' +
         '<div class="settings-option' + (practiceConfig.cpuLevel === 'normal' ? ' selected' : '') + '" data-val="normal">中級<span class="opt-sub">標準的・現物警戒</span></div>' +
-        '<div class="settings-option' + (practiceConfig.cpuLevel === 'hard' ? ' selected' : '') + '" data-val="hard">上級<span class="opt-sub">仲林プロAI・徹底守備（推奨）</span></div>' +
+        '<div class="settings-option' + (practiceConfig.cpuLevel === 'hard' ? ' selected' : '') + '" data-val="hard">上級<span class="opt-sub">仲林選手を参考にした押し引き学習（推奨）</span></div>' +
       '</div>' +
     '</div>' +
     '<button class="btn-main" id="btnStartPracticeMatch" style="margin-top: 10px; width: 100%;">対局を開始する</button>' +

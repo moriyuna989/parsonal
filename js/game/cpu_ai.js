@@ -13,7 +13,9 @@ function computeAllVisibleCounts() {
     p.river.forEach(function (t) { counts[tileIndex(t)]++; });
     if (p.melds) {
       p.melds.forEach(function (m) {
-        m.tiles.forEach(function (t) { counts[tileIndex(t)]++; });
+        var isConcealedKan = m.type === 'kan' && (m.subType === 'ankan' || m.concealed);
+        var visibleMeldTiles = isConcealedKan ? [(m.tiles && m.tiles[1]) || m.tiles[0], (m.tiles && m.tiles[2]) || m.tiles[0]] : m.tiles;
+        visibleMeldTiles.forEach(function (t) { if (t) counts[tileIndex(t)]++; });
       });
     }
   });
@@ -397,5 +399,334 @@ function evaluateCpuRiichiDecisionByLevel(seat, hand, tenpaiInfo, level) {
   // 【上級】仲林圭プロAIの緻密なリーチ判断
   return evaluateCpuRiichiDecisionNakabayashi(seat, hand, tenpaiInfo);
 }
+window.evaluateCpuRiichiDecisionByLevel = evaluateCpuRiichiDecisionByLevel;
+
+// ---------------------------------------------------------------------
+// Advanced CPU decision layer
+// The original heuristics above remain available for easy/normal levels.
+// This layer is used only by the advanced CPU and evaluates every discard.
+// ---------------------------------------------------------------------
+
+function cpuThreatSeatsFor(seat) {
+  if (!G || !G.players) return [];
+  return SEATS.filter(function (target) {
+    if (target === seat || !G.players[target]) return false;
+    var p = G.players[target];
+    // A human riichi is a real threat too.  For an open hand, use only
+    // public signals (melds and turn count), never its hidden wait state.
+    return !!p.riichi || (!!p.isOpen && (p.melds || []).length > 0 && (p.river || []).length >= 4);
+  });
+}
+
+function cpuSetHasTileType(set, tileCode) {
+  if (!set || !tileCode) return false;
+  if (set.has(tileCode)) return true;
+  var values = Array.from(set);
+  for (var i = 0; i < values.length; i++) {
+    var value = values[i];
+    if (isSameTileType(value, tileCode)) return true;
+  }
+  return false;
+}
+
+function cpuRiverHasTileType(river, tileCode) {
+  return (river || []).some(function (code) { return isSameTileType(code, tileCode); });
+}
+
+function cpuSujiForSeat(tileCode, targetSeat) {
+  var t = parseTile(tileCode);
+  if (t.suit === 'z' || !G.players[targetSeat]) return false;
+  var river = G.players[targetSeat].river || [];
+  var suit = t.suit;
+  var num = t.num;
+  if (num === 1) return cpuRiverHasTileType(river, '4' + suit);
+  if (num === 2) return cpuRiverHasTileType(river, '5' + suit);
+  if (num === 3) return cpuRiverHasTileType(river, '6' + suit);
+  if (num === 4) return cpuRiverHasTileType(river, '1' + suit) && cpuRiverHasTileType(river, '7' + suit);
+  if (num === 5) return cpuRiverHasTileType(river, '2' + suit) && cpuRiverHasTileType(river, '8' + suit);
+  if (num === 6) return cpuRiverHasTileType(river, '3' + suit) && cpuRiverHasTileType(river, '9' + suit);
+  if (num === 7) return cpuRiverHasTileType(river, '4' + suit);
+  if (num === 8) return cpuRiverHasTileType(river, '5' + suit);
+  if (num === 9) return cpuRiverHasTileType(river, '6' + suit);
+  return false;
+}
+
+function cpuDoraRisk(tileCode) {
+  var indicators = (G && (G.doraIndicators || (G.doraIndicator ? [G.doraIndicator] : []))) || [];
+  var isDora = indicators.filter(Boolean).some(function (indicator) {
+    return isSameTileType(tileCode, nextTile(indicator));
+  });
+  return (isDora ? 0.20 : 0) + (isRedTile(tileCode) ? 0.14 : 0);
+}
+
+function cpuBaseTileRisk(tileCode, visibleCounts) {
+  var t = parseTile(tileCode);
+  var count = visibleCounts[tileIndex(tileCode)] || 0;
+  if (count >= 4) return 0;
+  if (t.suit === 'z') return count >= 3 ? 0.10 : (count === 2 ? 0.30 : 0.62);
+  if (t.num === 1 || t.num === 9) return 0.36;
+  if (t.num === 2 || t.num === 8) return 0.50;
+  if (t.num === 3 || t.num === 7) return 0.66;
+  return 0.80;
+}
+
+function cpuTileRiskAgainst(tileCode, targetSeat, visibleCounts) {
+  var target = G.players[targetSeat];
+  if (!target) return 0;
+  var safeSet = target.riichi ? computeSafeSetFor(targetSeat) : new Set(target.river || []);
+  if (cpuSetHasTileType(safeSet, tileCode)) return 0;
+
+  var risk = cpuBaseTileRisk(tileCode, visibleCounts);
+  if (cpuSujiForSeat(tileCode, targetSeat)) {
+    var number = parseTile(tileCode).num;
+    risk *= (number === 1 || number === 9) ? 0.38 : (number === 2 || number === 8 ? 0.52 : 0.68);
+  }
+  var t = parseTile(tileCode);
+  var suitBase = t.suit === 'm' ? 0 : (t.suit === 'p' ? 9 : 18);
+  if (t.suit !== 'z') {
+    if ((t.num === 1 && visibleCounts[suitBase + 1] >= 4) ||
+        (t.num === 9 && visibleCounts[suitBase + 7] >= 4) ||
+        (t.num === 2 && visibleCounts[suitBase + 2] >= 4) ||
+        (t.num === 8 && visibleCounts[suitBase + 5] >= 4)) {
+      risk *= 0.72;
+    }
+  }
+  if (target.ippatsu) risk += 0.10;
+  if (!target.riichi) risk *= 0.78;
+  return Math.min(1, risk + cpuDoraRisk(tileCode));
+}
+
+function evaluateTileSafetyNakabayashi(tileCode, hand, threatSeats, visibleCounts) {
+  var threats = (threatSeats || []).filter(function (seat) { return G.players[seat]; });
+  if (!threats.length) return 0;
+  var risks = threats.map(function (seat) { return cpuTileRiskAgainst(tileCode, seat, visibleCounts); });
+  // A tile safe against one opponent still has to pass every other opponent.
+  var survival = risks.reduce(function (product, risk) { return product * (1 - risk); }, 1);
+  return Math.min(100, (1 - survival) * 100);
+}
+
+function cpuStandardShanten(counts, openMelds) {
+  var best = 8;
+  function visit(index, melds, taatsu, pair) {
+    while (index < 34 && counts[index] === 0) index++;
+    if (index >= 34) {
+      var usableTaatsu = Math.min(taatsu, 4 - melds);
+      best = Math.min(best, 8 - melds * 2 - usableTaatsu - pair);
+      return;
+    }
+    // Skip one tile.  This branch is needed for isolated tiles and excess copies.
+    counts[index]--;
+    visit(index, melds, taatsu, pair);
+    counts[index]++;
+
+    if (counts[index] >= 3) {
+      counts[index] -= 3;
+      visit(index, melds + 1, taatsu, pair);
+      counts[index] += 3;
+    }
+    if (index < 27 && index % 9 <= 6 && counts[index + 1] > 0 && counts[index + 2] > 0) {
+      counts[index]--; counts[index + 1]--; counts[index + 2]--;
+      visit(index, melds + 1, taatsu, pair);
+      counts[index]++; counts[index + 1]++; counts[index + 2]++;
+    }
+    if (!pair && counts[index] >= 2) {
+      counts[index] -= 2;
+      visit(index, melds, taatsu, 1);
+      counts[index] += 2;
+    }
+    if (taatsu < 4 - melds && counts[index] >= 2) {
+      counts[index] -= 2;
+      visit(index, melds, taatsu + 1, pair);
+      counts[index] += 2;
+    }
+    if (taatsu < 4 - melds && index < 27 && index % 9 <= 7 && counts[index + 1] > 0) {
+      counts[index]--; counts[index + 1]--;
+      visit(index, melds, taatsu + 1, pair);
+      counts[index]++; counts[index + 1]++;
+    }
+    if (taatsu < 4 - melds && index < 27 && index % 9 <= 6 && counts[index + 2] > 0) {
+      counts[index]--; counts[index + 2]--;
+      visit(index, melds, taatsu + 1, pair);
+      counts[index]++; counts[index + 2]++;
+    }
+  }
+  visit(0, openMelds || 0, 0, 0);
+  return best;
+}
+
+function cpuCalculateShanten(hand, openMelds) {
+  var counts = tilesToCounts(hand);
+  var standard = cpuStandardShanten(counts.slice(), openMelds || 0);
+  var chiitoi = (openMelds || 0) ? 99 : 6;
+  var kokushi = (openMelds || 0) ? 99 : 13;
+  if (!(openMelds || 0)) {
+    var pairCount = 0;
+    var terminals = [0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33];
+    var allDistinct = 0;
+    for (var i = 0; i < 34; i++) {
+      if (counts[i] > 0) allDistinct++;
+      if (counts[i] >= 2) pairCount++;
+    }
+    chiitoi = 6 - pairCount + Math.max(0, 7 - allDistinct);
+    var terminalDistinct = terminals.filter(function (index) { return counts[index] > 0; }).length;
+    var terminalPair = terminals.some(function (index) { return counts[index] >= 2; });
+    kokushi = 13 - terminalDistinct - (terminalPair ? 1 : 0);
+  }
+  return Math.min(standard, chiitoi, kokushi);
+}
+
+function cpuEstimateCandidateValue(seat, afterHand, waits, includeScore) {
+  if (!includeScore || !waits.length || typeof scorePlayerWin !== 'function') return 0;
+  var values = waits.map(function (wait) {
+    try {
+      var score = scorePlayerWin(seat, afterHand.concat([wait]), wait, false);
+      return score && score.isComplete && !score.noYaku ? (score.total || 0) : 0;
+    } catch (err) { return 0; }
+  });
+  if (!values.length) return 0;
+  return Math.min(1, Math.max.apply(Math, values) / 12000);
+}
+
+function cpuLearningWeights() {
+  if (typeof CpuLearning !== 'undefined' && CpuLearning.getWeights) return CpuLearning.getWeights();
+  return { progress: 1, ukeire: 0.7, wait: 0.8, value: 0.35, safety: 0.2, danger: 1.15, humanStyle: {} };
+}
+
+function cpuBuildDiscardCandidates(seat, hand, options) {
+  options = options || {};
+  var cacheKey = seat + '|' + (options.includeScore !== false ? 'score' : 'shape') + '|' + hand.slice().sort().join(',') +
+    '|' + (G.players[seat] && G.players[seat].river ? G.players[seat].river.length : 0) +
+    '|' + SEATS.map(function (target) { return G.players[target] && G.players[target].riichi ? target : ''; }).join(',') +
+    '|' + (G.doraIndicators || []).join(',');
+  if (G._cpuCandidateCache && G._cpuCandidateCache.key === cacheKey) return G._cpuCandidateCache.value;
+  var player = G.players[seat] || { melds: [] };
+  var meldCount = (player.melds || []).length;
+  var visibleCounts = computeAllVisibleCounts();
+  var threats = cpuThreatSeatsFor(seat);
+  var weights = cpuLearningWeights();
+  var uniqueTiles = Array.from(new Set(hand));
+  var candidates = [];
+  var turn = (G.players[seat] && G.players[seat].river ? G.players[seat].river.length : 0) + 1;
+
+  uniqueTiles.forEach(function (tile) {
+    var after = hand.slice();
+    var index = after.indexOf(tile);
+    if (index === -1) return;
+    after.splice(index, 1);
+    var waits = findWaitsOpen(after, meldCount);
+    var shanten = cpuCalculateShanten(after, meldCount);
+    var remaining = visibleCounts.slice();
+    after.forEach(function (code) { remaining[tileIndex(code)]++; });
+    var ukeire = 0;
+    for (var i = 0; i < 34; i++) {
+      if (remaining[i] >= 4) continue;
+      var draw = indexToCode(i);
+      var test = after.concat([draw]);
+      if (cpuCalculateShanten(test, meldCount) < shanten) ukeire += Math.max(0, 4 - remaining[i]);
+    }
+    var risk = evaluateTileSafetyNakabayashi(tile, hand, threats, visibleCounts);
+    var risk01 = Math.min(1, risk / 100);
+    var wait01 = Math.min(1, waits.length / 12);
+    var candidate = {
+      tile: tile,
+      waits: waits,
+      shanten: shanten,
+      ukeire: ukeire,
+      risk: risk,
+      value: cpuEstimateCandidateValue(seat, after, waits, options.includeScore !== false),
+      features: {
+        progress: Math.max(0, Math.min(1, (8 - shanten) / 8)),
+        ukeire: Math.max(0, Math.min(1, ukeire / 24)),
+        wait: wait01,
+        value: 0,
+        safety: 1 - risk01,
+        danger: risk01
+      }
+    };
+    candidate.features.value = candidate.value;
+    candidate.score = weights.progress * candidate.features.progress +
+      weights.ukeire * candidate.features.ukeire +
+      weights.wait * candidate.features.wait +
+      weights.value * candidate.features.value +
+      weights.safety * candidate.features.safety -
+      weights.danger * candidate.features.danger;
+    if (weights.humanStyle) {
+      Object.keys(candidate.features).forEach(function (key) {
+        candidate.score += 0.10 * (candidate.features[key] - 0.5) * (weights.humanStyle[key] || 0);
+      });
+    }
+    // Preserve the existing shape heuristic as a small tie breaker.
+    candidate.score += evaluateTileWasteNakabayashi(tile, hand, seat, tilesToCounts(hand)) * 0.002;
+    candidate.turn = turn;
+    candidates.push(candidate);
+  });
+  G._cpuCandidateCache = { key: cacheKey, value: candidates };
+  return candidates;
+}
+window.cpuBuildDiscardCandidates = cpuBuildDiscardCandidates;
+
+function cpuBestCandidate(candidates) {
+  return candidates.reduce(function (best, candidate) {
+    if (!best || candidate.score > best.score + 0.0001) return candidate;
+    if (Math.abs(candidate.score - best.score) <= 0.0001 && Math.random() < 0.35) return candidate;
+    return best;
+  }, null);
+}
+
+function chooseCpuDiscardNakabayashi(seat, hand) {
+  var candidates = cpuBuildDiscardCandidates(seat, hand, { includeScore: true });
+  var best = cpuBestCandidate(candidates);
+  if (!best) return hand[0];
+  return best.tile;
+}
+
+function checkCpuTenpaiAndDiscard(hand, seat, level) {
+  var uniqueTiles = Array.from(new Set(hand));
+  var hardMode = !level || level === 'hard';
+  if (!hardMode) {
+    for (var i = 0; i < uniqueTiles.length; i++) {
+      var firstTile = uniqueTiles[i];
+      var firstCopy = hand.slice();
+      firstCopy.splice(firstCopy.indexOf(firstTile), 1);
+      var firstWaits = findWaits(firstCopy);
+      if (firstWaits.length > 0) return { canTenpai: true, discardTile: firstTile, waits: firstWaits };
+    }
+    return { canTenpai: false };
+  }
+  var candidates = cpuBuildDiscardCandidates(seat || 'p2', hand, { includeScore: true }).filter(function (c) { return c.waits.length > 0; });
+  var best = cpuBestCandidate(candidates);
+  if (!best) return { canTenpai: false };
+  return { canTenpai: true, discardTile: best.tile, waits: best.waits, candidate: best };
+}
+
+function evaluateCpuRiichiDecisionNakabayashi(seat, hand, tenpaiInfo) {
+  var p = G.players[seat];
+  var candidate = tenpaiInfo.candidate || cpuBuildDiscardCandidates(seat, hand, { includeScore: true }).find(function (c) { return c.tile === tenpaiInfo.discardTile; });
+  var waits = tenpaiInfo.waits || [];
+  var threats = cpuThreatSeatsFor(seat);
+  var turn = p.river.length + 1;
+  var value = candidate ? candidate.value : 0;
+  var danger = candidate ? candidate.features.danger : 1;
+  var goodWait = waits.length >= 2;
+  if (!threats.length) return { shouldRiichi: goodWait || value >= 0.45 || turn >= 7, discardTile: tenpaiInfo.discardTile };
+  // Against a live threat, only chase with a meaningful wait or hand value.
+  return {
+    shouldRiichi: danger < 0.45 && (goodWait || value >= 0.55) && (p.isOpen || turn >= 5),
+    discardTile: tenpaiInfo.discardTile
+  };
+}
+
+function evaluateCpuRiichiDecisionByLevel(seat, hand, tenpaiInfo, level) {
+  level = level || 'hard';
+  if (level === 'easy') return { shouldRiichi: true, discardTile: tenpaiInfo.discardTile };
+  if (level === 'normal') {
+    var waits = tenpaiInfo.waits || [];
+    var threats = riichiSeatsActive().filter(function (s) { return s !== seat; });
+    return { shouldRiichi: !threats.length ? (waits.length >= 2 || Math.random() < 0.6) : waits.length >= 2, discardTile: tenpaiInfo.discardTile };
+  }
+  return evaluateCpuRiichiDecisionNakabayashi(seat, hand, tenpaiInfo);
+}
+window.chooseCpuDiscardNakabayashi = chooseCpuDiscardNakabayashi;
+window.checkCpuTenpaiAndDiscard = checkCpuTenpaiAndDiscard;
 window.evaluateCpuRiichiDecisionByLevel = evaluateCpuRiichiDecisionByLevel;
 

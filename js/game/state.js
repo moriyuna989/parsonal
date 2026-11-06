@@ -87,21 +87,46 @@ function computeSafeSetFor(seat) {
     if (idx === 13) safe.add('0p');
     if (idx === 22) safe.add('0s');
   });
-  SEATS.forEach(function (s) {
-    if (s === seat) return;
-    var arr = G.players[s].river;
-    for (var idx = R.riichiTurn - 1; idx < arr.length; idx++) {
-      if (arr[idx] !== undefined) {
-        var t = arr[idx];
-        safe.add(t);
-        var ti = tileIndex(t);
-        safe.add(indexToCode(ti));
-        if (ti === 4) safe.add('0m');
-        if (ti === 13) safe.add('0p');
-        if (ti === 22) safe.add('0s');
+  var addedAfterRiichi = false;
+  if (R.riichi && Array.isArray(G.discardHistory)) {
+    var riichiEventIndex = -1;
+    for (var eventIndex = 0; eventIndex < G.discardHistory.length; eventIndex++) {
+      var event = G.discardHistory[eventIndex];
+      if (event.seat === seat && event.riverIndex === R.riichiTurn - 1) {
+        riichiEventIndex = eventIndex;
+        break;
       }
     }
-  });
+    if (riichiEventIndex !== -1) {
+      G.discardHistory.slice(riichiEventIndex + 1).forEach(function (entry) {
+        if (entry.seat === seat || !entry.tile) return;
+        safe.add(entry.tile);
+        var entryIndex = tileIndex(entry.tile);
+        safe.add(indexToCode(entryIndex));
+        if (entryIndex === 4) safe.add('0m');
+        if (entryIndex === 13) safe.add('0p');
+        if (entryIndex === 22) safe.add('0s');
+      });
+      addedAfterRiichi = true;
+    }
+  }
+  if (!addedAfterRiichi && R.riichi) {
+    SEATS.forEach(function (s) {
+      if (s === seat) return;
+      var arr = G.players[s].river;
+      for (var idx = R.riichiTurn - 1; idx < arr.length; idx++) {
+        if (arr[idx] !== undefined) {
+          var t = arr[idx];
+          safe.add(t);
+          var ti = tileIndex(t);
+          safe.add(indexToCode(ti));
+          if (ti === 4) safe.add('0m');
+          if (ti === 13) safe.add('0p');
+          if (ti === 22) safe.add('0s');
+        }
+      }
+    });
+  }
   return safe;
 }
 window.computeSafeSetFor = computeSafeSetFor;

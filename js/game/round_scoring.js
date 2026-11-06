@@ -143,6 +143,14 @@ window.canPlayerWinWith = canPlayerWinWith;
 
 function recordDiscardScoringContext(seat) {
   if (!G) return;
+  if (!Array.isArray(G.discardHistory)) G.discardHistory = [];
+  if (G.players[seat] && G.players[seat].river && G.players[seat].river.length) {
+    G.discardHistory.push({
+      seat: seat,
+      tile: G.players[seat].river[G.players[seat].river.length - 1],
+      riverIndex: G.players[seat].river.length - 1
+    });
+  }
   if (G.initialDrawSeat === seat) G.initialDrawSeat = null;
   G.lastDiscardWasLastLiveTile = !!G.lastDrawWasLastLiveTile && !G.lastDrawWasRinshan;
   if (G.players[seat]) G.players[seat].firstDiscardDone = true;
