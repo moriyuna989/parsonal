@@ -41,6 +41,20 @@ function totalKanCount() {
 }
 window.totalKanCount = totalKanCount;
 
+function isCpuCallResponder(seat) {
+  if (!isPractice || !seat || seat === 'you') return false;
+  var level = (matchState && matchState.cpuLevel) || 'hard';
+  if (level !== 'hard') return false;
+  if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+    if (typeof OnlinePeer === 'undefined' || !OnlinePeer.isHost()) return false;
+    var slot = (typeof OnlineGameRuntime !== 'undefined' && OnlineGameRuntime.seatsConfig || []).find(function (entry) {
+      return entry.seat === seat;
+    });
+    return !!(slot && slot.isCpu);
+  }
+  return typeof CpuLearning === 'undefined' || !CpuLearning.isCpuSeat || CpuLearning.isCpuSeat(seat);
+}
+
 function recordPaoResponsibility(seat, meld) {
   var player = G && G.players && G.players[seat];
   if (!player || !meld || !meld.from) return;
@@ -81,7 +95,9 @@ function startCallWindow(tile, fromSeat, resumeAfterPass) {
   var candidates = [];
   var seat = nextSeat(fromSeat);
   for (var i = 0; i < 3; i++) {
-    var canRespond = seat === 'you' || (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline() && OnlineGame.isGuestSeat(seat));
+    var canRespond = seat === 'you' ||
+      (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline() && OnlineGame.isGuestSeat(seat)) ||
+      isCpuCallResponder(seat);
     if (canRespond) {
       var options = checkUserCallOptions(tile, fromSeat, seat);
       if (options.canPon || options.canKan || options.chiOptions.length) {
@@ -109,6 +125,25 @@ function advanceCallWindow(index) {
   }
   pending.index = index;
   var candidate = pending.candidates[index];
+  if (isCpuCallResponder(candidate.seat)) {
+    var cpuAction = typeof chooseCpuCallActionForSeat === 'function'
+      ? chooseCpuCallActionForSeat(candidate.seat, pending.tile, pending.fromSeat)
+      : { type: 'pass' };
+    if (cpuAction && cpuAction.type !== 'pass') {
+      var appliedCpuCall = applyCallForSeat(candidate.seat, cpuAction, pending);
+      if (appliedCpuCall) {
+        // ポン・チーはツモを挟まずそのまま打牌する。カンの場合は
+        // applyCallForSeat が嶺上牌を入れているので、その牌を打牌候補に渡す。
+        setTimeout(function () {
+          if (!G || G.gameOver) return;
+          if (typeof advancePracticeTurn === 'function') advancePracticeTurn(true);
+        }, 350);
+        return;
+      }
+    }
+    advanceCallWindow(index + 1);
+    return;
+  }
   var offer = {
     tile: pending.tile,
     fromSeat: pending.fromSeat,
@@ -203,12 +238,16 @@ function applyCallForSeat(seat, action, pending) {
     clearTemporaryFuriten(seat);
     player.hand.push(rinshan);
     G.lastDrawn = rinshan;
+    G.replayDrawSeat = seat;
+    G.replayDrawTile = rinshan;
     G.lastDrawWasLastLiveTile = false;
     G.lastDrawWasRinshan = true;
     G.justDrew = seat === 'you';
     G.log.push((seat === 'you' ? 'あなたは' : OnlineGame.getSeatDisplayName(seat) + 'は') + '嶺上牌から ' + tileName(rinshan) + ' をツモりました。');
   } else {
     G.justDrew = false;
+    G.replayDrawSeat = null;
+    G.replayDrawTile = null;
   }
   G.processing = seat !== 'you';
   render();

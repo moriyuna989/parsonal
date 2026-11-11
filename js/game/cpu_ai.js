@@ -726,6 +726,146 @@ function evaluateCpuRiichiDecisionByLevel(seat, hand, tenpaiInfo, level) {
   }
   return evaluateCpuRiichiDecisionNakabayashi(seat, hand, tenpaiInfo);
 }
+
+// ---------------------------------------------------------------------
+// 上級CPUの鳴き判断
+// 鳴き自体を目的にせず、「鳴いた直後に一枚切った手」を通常の打牌候補と
+// 同じ観点で評価する。評価中は実ゲームの手牌・副露を変更しない。
+function cpuCallYakuPotential(seat, callTile, handAfterCall) {
+  var tile = parseTile(callTile);
+  var bonus = 0;
+  if (tile.suit === 'z' && isYakuhai(callTile, seat)) bonus += 0.46;
+  if (tile.suit === 'z' && !isYakuhai(callTile, seat)) bonus -= 0.16;
+
+  var suited = handAfterCall.filter(function (code) { return parseTile(code).suit !== 'z'; });
+  if (tile.suit !== 'z' && suited.length) {
+    var sameSuit = suited.filter(function (code) { return parseTile(code).suit === tile.suit; }).length;
+    var ratio = sameSuit / suited.length;
+    if (ratio >= 0.78) bonus += 0.28; // 混一色・清一色の方向
+    else if (ratio >= 0.62) bonus += 0.12;
+  }
+
+  var hasSimpleOnly = handAfterCall.every(function (code) {
+    var t = parseTile(code); return t.suit !== 'z' && t.num >= 2 && t.num <= 8;
+  });
+  if (hasSimpleOnly) bonus += 0.22; // 断么九の見込み
+  return bonus;
+}
+
+function cpuCallDoraPotential(handAfterCall) {
+  var indicators = (G && (G.doraIndicators || (G.doraIndicator ? [G.doraIndicator] : []))) || [];
+  var doraTypes = indicators.filter(Boolean).map(nextTile);
+  var count = handAfterCall.filter(function (code) {
+    return doraTypes.some(function (dora) { return isSameTileType(code, dora); }) || isRedTile(code);
+  }).length;
+  return Math.min(0.30, count * 0.035);
+}
+
+function cpuCallPostDiscardBest(seat, handAfterCall, meldCount) {
+  var visibleCounts = computeAllVisibleCounts();
+  var threats = cpuThreatSeatsFor(seat);
+  var unique = Array.from(new Set(handAfterCall));
+  var best = null;
+  unique.forEach(function (discard) {
+    var after = handAfterCall.slice();
+    var discardIndex = after.indexOf(discard);
+    if (discardIndex < 0) return;
+    after.splice(discardIndex, 1);
+    var shanten = cpuCalculateShanten(after, meldCount);
+    var waits = findWaitsOpen(after, meldCount);
+    var remaining = visibleCounts.slice();
+    after.forEach(function (code) { remaining[tileIndex(code)]++; });
+    var ukeire = 0;
+    for (var i = 0; i < 34; i++) {
+      if (remaining[i] >= 4) continue;
+      var draw = indexToCode(i);
+      if (cpuCalculateShanten(after.concat([draw]), meldCount) < shanten) {
+        ukeire += Math.max(0, 4 - remaining[i]);
+      }
+    }
+    var risk = evaluateTileSafetyNakabayashi(discard, handAfterCall, threats, visibleCounts);
+    var value = cpuEstimateCandidateValue(seat, after, waits, true);
+    var score = ((8 - shanten) / 8) * 1.25 + Math.min(1, ukeire / 24) * 0.82 +
+      Math.min(1, waits.length / 12) * 0.72 + value * 0.34 - Math.min(1, risk / 100) * 0.92;
+    var candidate = { tile: discard, hand: after, shanten: shanten, waits: waits, ukeire: ukeire, risk: risk, value: value, score: score };
+    if (!best || candidate.score > best.score) best = candidate;
+  });
+  return best;
+}
+
+function cpuCallActionHand(seat, action) {
+  var player = G.players[seat];
+  if (!player) return null;
+  var targetIdx = tileIndex(action.tile);
+  var hand = player.hand.slice();
+  if (action.type === 'pon' || action.type === 'kan') {
+    var need = action.type === 'pon' ? 2 : 3;
+    var removed = 0;
+    for (var i = hand.length - 1; i >= 0 && removed < need; i--) {
+      if (tileIndex(hand[i]) === targetIdx) { hand.splice(i, 1); removed++; }
+    }
+    return removed === need ? hand : null;
+  }
+  if (action.type === 'chi') {
+    var combo = action.combo || [];
+    if (combo.length !== 2) return null;
+    for (var c = 0; c < combo.length; c++) {
+      var index = hand.findIndex(function (code) { return code === combo[c]; });
+      if (index < 0) index = hand.findIndex(function (code) { return tileIndex(code) === tileIndex(combo[c]); });
+      if (index < 0) return null;
+      hand.splice(index, 1);
+    }
+    return hand;
+  }
+  return null;
+}
+
+function chooseCpuCallActionForSeat(seat, tile, fromSeat) {
+  var player = G && G.players && G.players[seat];
+  if (!player || player.riichi || typeof checkUserCallOptions !== 'function') return { type: 'pass' };
+  var legal = checkUserCallOptions(tile, fromSeat, seat);
+  var actions = [];
+  if (legal.canKan) actions.push({ type: 'kan', tile: tile });
+  if (legal.canPon) actions.push({ type: 'pon', tile: tile });
+  (legal.chiOptions || []).forEach(function (combo) {
+    actions.push({ type: 'chi', tile: tile, combo: combo });
+  });
+  if (!actions.length) return { type: 'pass' };
+
+  var baseCandidates = cpuBuildDiscardCandidates(seat, player.hand.slice(), { includeScore: true });
+  var base = cpuBestCandidate(baseCandidates);
+  var baseScore = base ? base.score : -Infinity;
+  var baseShanten = base ? base.shanten : 8;
+  var best = null;
+  var seen = {};
+  actions.forEach(function (action) {
+    var key = action.type + '|' + tileIndex(action.tile) + '|' + ((action.combo || []).map(tileIndex).join(','));
+    if (seen[key]) return;
+    seen[key] = true;
+    var handAfterCall = cpuCallActionHand(seat, action);
+    if (!handAfterCall) return;
+    var post = cpuCallPostDiscardBest(seat, handAfterCall, (player.melds || []).length + 1);
+    if (!post) return;
+    var yaku = cpuCallYakuPotential(seat, tile, handAfterCall);
+    var dora = cpuCallDoraPotential(handAfterCall);
+    var openPenalty = action.type === 'kan' ? 0.06 : 0.12;
+    var score = post.score + yaku + dora - openPenalty;
+    var candidate = { action: action, score: score, post: post, yaku: yaku };
+    if (!best || candidate.score > best.score) best = candidate;
+  });
+  if (!best) return { type: 'pass' };
+
+  // 鳴き後の一打が、鳴かずに進める手を明確に上回る場合だけ鳴く。
+  // 役の見込みがない鳴きや、向聴数を悪化させる鳴きは見送る。
+  var improvesShape = best.post.shanten < baseShanten || best.post.ukeire >= (base && base.ukeire || 0) + 2;
+  var hasYaku = best.yaku >= 0.20;
+  if (best.post.shanten > baseShanten) return { type: 'pass' };
+  if (!improvesShape && !hasYaku) return { type: 'pass' };
+  if (best.score < baseScore + 0.08 && !(hasYaku && best.post.shanten <= baseShanten && best.post.ukeire >= (base && base.ukeire || 0) - 1)) return { type: 'pass' };
+  return best.action;
+}
+
+window.chooseCpuCallActionForSeat = chooseCpuCallActionForSeat;
 window.chooseCpuDiscardNakabayashi = chooseCpuDiscardNakabayashi;
 window.checkCpuTenpaiAndDiscard = checkCpuTenpaiAndDiscard;
 window.evaluateCpuRiichiDecisionByLevel = evaluateCpuRiichiDecisionByLevel;

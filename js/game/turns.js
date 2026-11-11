@@ -49,7 +49,7 @@ function opponentTurn(seat) {
   }
 }
 
-function advancePracticeTurn() {
+function advancePracticeTurn(skipCpuDraw) {
   if (!isPractice || !G || G.gameOver) return;
   var seat = G.currentTurnSeat;
   if (!seat || !G.players || !G.players[seat]) return;
@@ -128,66 +128,69 @@ function advancePracticeTurn() {
   }
 
   var p = G.players[seat];
-  var initialCpuDraw = G.initialDrawSeat === seat && G.lastDrawn && p.hand.includes(G.lastDrawn);
-  var draw = initialCpuDraw ? G.lastDrawn : drawRandom(G.pool);
-  if (initialCpuDraw) G.initialDrawSeat = null;
-  else {
-    G.lastDrawWasLastLiveTile = poolTotal(G.pool) === 0;
-    G.lastDrawWasRinshan = false;
-    clearTemporaryFuriten(seat);
-  }
-  if (!initialCpuDraw) p.hand.push(draw);
-  G.replayDrawSeat = seat;
-  G.replayDrawTile = draw;
-  if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot(SEAT_NAME[seat] + 'が' + tileName(draw) + 'をツモりました。');
-
-  if (isComplete14(p.hand)) {
-    var winScore = scorePlayerWin(seat, p.hand, draw, true);
-    if (winScore.isComplete && !winScore.noYaku && winScore.han >= 1) {
-      G.processing = false;
-      G.gameOver = true;
-      G.outcome = { type: 'opp_tsumo', seat: seat, tile: draw, score: winScore };
-      render();
-      if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
-        OnlineGame.syncRoundOver();
-      }
-      return;
+  var skipDraw = !!skipCpuDraw;
+  var initialCpuDraw = !skipDraw && G.initialDrawSeat === seat && G.lastDrawn && p.hand.includes(G.lastDrawn);
+  var draw = skipDraw ? null : (initialCpuDraw ? G.lastDrawn : drawRandom(G.pool));
+  if (!skipDraw) {
+    if (initialCpuDraw) G.initialDrawSeat = null;
+    else {
+      G.lastDrawWasLastLiveTile = poolTotal(G.pool) === 0;
+      G.lastDrawWasRinshan = false;
+      clearTemporaryFuriten(seat);
     }
-  }
+    if (!initialCpuDraw) p.hand.push(draw);
+    G.replayDrawSeat = seat;
+    G.replayDrawTile = draw;
+    if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot(SEAT_NAME[seat] + 'が' + tileName(draw) + 'をツモりました。');
 
-  if (!p.riichi && !G.lastDrawWasLastLiveTile && totalKanCount() < 4) {
-    var cpuCounts = tilesToCounts(p.hand);
-    for (var ci = 0; ci < 34; ci++) {
-      if (cpuCounts[ci] === 4) {
-        var kanCode = indexToCode(ci);
-        var removedCpu = [];
-        for (var rci = p.hand.length - 1; rci >= 0; rci--) {
-          if (tileIndex(p.hand[rci]) === ci && removedCpu.length < 4) {
-            removedCpu.push(p.hand.splice(rci, 1)[0]);
+    if (isComplete14(p.hand)) {
+      var winScore = scorePlayerWin(seat, p.hand, draw, true);
+      if (winScore.isComplete && !winScore.noYaku && winScore.han >= 1) {
+        G.processing = false;
+        G.gameOver = true;
+        G.outcome = { type: 'opp_tsumo', seat: seat, tile: draw, score: winScore };
+        render();
+        if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) {
+          OnlineGame.syncRoundOver();
+        }
+        return;
+      }
+    }
+
+    if (!p.riichi && !G.lastDrawWasLastLiveTile && totalKanCount() < 4) {
+      var cpuCounts = tilesToCounts(p.hand);
+      for (var ci = 0; ci < 34; ci++) {
+        if (cpuCounts[ci] === 4) {
+          var kanCode = indexToCode(ci);
+          var removedCpu = [];
+          for (var rci = p.hand.length - 1; rci >= 0; rci--) {
+            if (tileIndex(p.hand[rci]) === ci && removedCpu.length < 4) {
+              removedCpu.push(p.hand.splice(rci, 1)[0]);
+            }
           }
+          p.melds.push({ type: 'kan', subType: 'ankan', tiles: removedCpu, concealed: true });
+          G.log.push(SEAT_NAME[seat] + 'が' + tileName(kanCode) + 'を暗槓しました。');
+          cancelAllIppatsu();
+          openKanDora();
+          var rinshanCpu = drawRinshan();
+          if (!rinshanCpu) {
+            G.processing = false;
+            G.gameOver = true;
+            G.outcome = { type: 'ryuukyoku' };
+            render();
+            if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) OnlineGame.syncRoundOver();
+            return;
+          }
+          p.hand.push(rinshanCpu);
+          draw = rinshanCpu;
+          G.replayDrawSeat = seat;
+          G.replayDrawTile = rinshanCpu;
+          clearTemporaryFuriten(seat);
+          G.lastDrawWasLastLiveTile = false;
+          G.lastDrawWasRinshan = true;
+          if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot(SEAT_NAME[seat] + 'が嶺上牌 ' + tileName(rinshanCpu) + 'をツモりました。');
+          break;
         }
-        p.melds.push({ type: 'kan', subType: 'ankan', tiles: removedCpu, concealed: true });
-        G.log.push(SEAT_NAME[seat] + 'が' + tileName(kanCode) + 'を暗槓しました。');
-        cancelAllIppatsu();
-        openKanDora();
-        var rinshanCpu = drawRinshan();
-        if (!rinshanCpu) {
-          G.processing = false;
-          G.gameOver = true;
-          G.outcome = { type: 'ryuukyoku' };
-          render();
-          if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline()) OnlineGame.syncRoundOver();
-          return;
-        }
-        p.hand.push(rinshanCpu);
-        draw = rinshanCpu;
-        G.replayDrawSeat = seat;
-        G.replayDrawTile = rinshanCpu;
-        clearTemporaryFuriten(seat);
-        G.lastDrawWasLastLiveTile = false;
-        G.lastDrawWasRinshan = true;
-        if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot(SEAT_NAME[seat] + 'が嶺上牌 ' + tileName(rinshanCpu) + 'をツモりました。');
-        break;
       }
     }
   }

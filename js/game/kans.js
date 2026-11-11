@@ -50,7 +50,9 @@ function canAnkanForSeat(seat, targetTile) {
   var player = G && G.players[seat];
   if (!player || !G.justDrew || G.lastDrawWasLastLiveTile || totalKanCount() >= 4 || G.currentTurnSeat !== seat || !G.lastDrawn || !player.hand.includes(G.lastDrawn)) return false;
   var targetIdx = tileIndex(targetTile);
-  if (tileIndex(G.lastDrawn) !== targetIdx || player.hand.filter(function (t) { return tileIndex(t) === targetIdx; }).length !== 4) return false;
+  // 暗槓は、直前にツモった牌が4枚目である必要はありません。
+  // ツモ後の手牌に同じ牌種が4枚あれば候補にする（赤5も同じ牌種として扱う）。
+  if (player.hand.filter(function (t) { return tileIndex(t) === targetIdx; }).length !== 4) return false;
   if (!player.riichi) return true;
   var before = player.hand.slice();
   before.splice(before.indexOf(G.lastDrawn), 1);
