@@ -16,6 +16,7 @@ function opponentTurn(seat) {
     p.river.push(draw);
     recordDiscardScoringContext(seat);
     G.lastDiscardSeat = seat;
+    if (typeof clearCallNoticeForDiscard === 'function') clearCallNoticeForDiscard(seat);
     G.log.push(SEAT_NAME[seat] + 'が' + tileName(draw) + 'をツモ切りしました。');
     var ron = checkRon(draw, seat, function () { G.processing = true; setTimeout(advanceOpponentQueue, 400); });
     if (ron === 'pending') return { type: 'pending_ron' };
@@ -39,6 +40,7 @@ function opponentTurn(seat) {
     p.river.push(discard);
     recordDiscardScoringContext(seat);
     G.lastDiscardSeat = seat;
+    if (typeof clearCallNoticeForDiscard === 'function') clearCallNoticeForDiscard(seat);
     G.log.push(SEAT_NAME[seat] + 'が' + tileName(discard) + 'を切りました。' + (wasSafe ? '（安全牌）' : ''));
     var ron2 = checkRon(discard, seat, function () { G.processing = true; setTimeout(advanceOpponentQueue, 400); });
     if (ron2 === 'pending') return { type: 'pending_ron' };
@@ -257,6 +259,7 @@ function advancePracticeTurn(skipCpuDraw) {
   G.replayDrawTile = null;
   recordDiscardScoringContext(seat);
   G.lastDiscardSeat = seat;
+  if (typeof clearCallNoticeForDiscard === 'function') clearCallNoticeForDiscard(seat);
   if (typeof captureReplaySnapshot === 'function') captureReplaySnapshot();
 
   if (!p.riichi) {

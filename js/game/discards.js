@@ -62,6 +62,7 @@ function afterUserDiscard(tileCode, viaRiichi) {
   G.players.you.river.push(tileCode);
   recordDiscardScoringContext('you');
   G.lastDiscardSeat = 'you';
+  if (typeof clearCallNoticeForDiscard === 'function') clearCallNoticeForDiscard('you');
   G.selected = null;
   G.selectedIndex = null;
   G.lastTileClick = null;
@@ -128,6 +129,7 @@ function executeOnlineGuestDiscard(seat, tileCode, viaRiichi, senderId) {
   p.river.push(tileCode);
   recordDiscardScoringContext(seat);
   G.lastDiscardSeat = seat;
+  if (typeof clearCallNoticeForDiscard === 'function') clearCallNoticeForDiscard(seat);
   G.justDrew = false;
   G.replayDrawSeat = null;
   G.replayDrawTile = null;

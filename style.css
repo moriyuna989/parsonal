@@ -393,6 +393,23 @@
   .badge-naki { font-size: 11px; color: var(--ink-soft); border: 1px solid var(--line); padding: 1px 8px; border-radius: 999px; }
   .badge-oya { font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
   .badge-wind { font-size: 11px; color: var(--ink-soft); border: 1px solid var(--line); padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+  .opp-river-area, .replay-river-area { display: flex; align-items: flex-start; gap: 4px; min-width: 0; }
+  .opp-river-area .opp-river, .replay-river-area .replay-river { flex: 1 1 auto; width: auto; min-width: 0; }
+  .game-mode .opp-river-area .opp-river { flex: 1 1 auto; width: auto; }
+  .call-river-marker, .replay-call-river-marker {
+    display: inline-flex; flex: 0 0 auto; min-width: 34px; max-width: 62px;
+    flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    padding: 2px 3px; border: 1px solid var(--accent); border-radius: 6px;
+    background: var(--surface); color: var(--accent-strong); font-size: 10px;
+    font-weight: 800; line-height: 1.15; text-align: center; box-sizing: border-box;
+  }
+  .call-river-source, .replay-call-river-source {
+    max-width: 100%; color: var(--ink-soft); font-size: 9px; font-weight: 700;
+    line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .call-river-marker .call-river-tile, .replay-call-river-marker .call-river-tile {
+    font-size: 15px; padding: 0; margin: 1px 0 0;
+  }
   .opp-river { display: grid; grid-template-columns: repeat(6, auto); gap: 3px; min-height: 26px; justify-content: start; }
   .opp-river .tile { font-size: 21px; padding: 1px 2px 2px; }
   .opp-river .tile.riichi-tile {
@@ -591,7 +608,10 @@
   }
   .hand-row .tile.selected.drawn.dora-tile {
     border-color: #d97706;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.9), 0 6px 14px -2px rgba(180, 83, 9, 0.35);
+    box-shadow:
+      0 0 0 2px rgba(245, 158, 11, 0.9),
+      0 0 0 4px var(--accent),
+      0 6px 14px -2px rgba(180, 83, 9, 0.35);
   }
 
   /* カン面子および暗槓の伏せ牌スタイル */

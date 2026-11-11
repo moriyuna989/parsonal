@@ -56,6 +56,7 @@ function sendGuestDiscard(tileCode, viaRiichi) {
   G.players.you.river.push(tileCode);
   recordDiscardScoringContext('you');
   G.lastDiscardSeat = 'you';
+  if (typeof clearCallNoticeForDiscard === 'function') clearCallNoticeForDiscard('you');
   G.selected = null;
   G.selectedIndex = null;
   G.justDrew = false;

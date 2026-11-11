@@ -58,7 +58,7 @@ function callNoticeKey(notice) {
   return [notice.type, notice.subType || '', notice.callerSeat, notice.fromSeat || '', notice.tile || ''].join('|');
 }
 
-function clearCallNotice(shouldSync) {
+function clearCallNotice(shouldSync, suppressRender) {
   if (!G) return;
   if (G.callNoticeTimer) {
     clearTimeout(G.callNoticeTimer);
@@ -67,7 +67,7 @@ function clearCallNotice(shouldSync) {
   if (!G.callNotice) return;
   G.callNotice = null;
   G.callNoticeSyncOnClear = false;
-  if (typeof render === 'function') render();
+  if (!suppressRender && typeof render === 'function') render();
   if (shouldSync && typeof OnlineGame !== 'undefined' && OnlineGame.isOnline() &&
       typeof OnlinePeer !== 'undefined' && OnlinePeer.isHost() &&
       typeof OnlineGame.syncOnlineStateToAll === 'function') {
@@ -75,6 +75,15 @@ function clearCallNotice(shouldSync) {
   }
 }
 window.clearCallNotice = clearCallNotice;
+
+// 鳴いた後の打牌が済んだら、河の近くに出している鳴き表示を消す。
+// ここでは描画を行わず、各打牌処理の最後の描画・同期に任せる。
+function clearCallNoticeForDiscard(seat) {
+  if (!G || !G.callNotice || G.callNotice.callerSeat !== seat) return false;
+  clearCallNotice(!!G.callNoticeSyncOnClear, true);
+  return true;
+}
+window.clearCallNoticeForDiscard = clearCallNoticeForDiscard;
 
 function setCallNotice(notice, syncOnClear) {
   if (!G || !notice || notice.callerSeat === 'you') return;

@@ -13,7 +13,19 @@ function riverHtml(seat) {
     }
     return gameTileEl(c, classes.join(' '));
   }).join('');
-  return '<div class="opp-river">' + html + '</div>';
+  var notice = G && G.callNotice && G.callNotice.callerSeat === seat ? G.callNotice : null;
+  var callMarker = '';
+  if (notice) {
+    var action = escapeCallNoticeText(callNoticeTypeLabel(notice));
+    var source = notice.fromSeat
+      ? '<span class="call-river-source">← ' + escapeCallNoticeText(callNoticeSeatName(notice.fromSeat)) + '</span>'
+      : '';
+    var calledTile = notice.tile ? gameTileEl(notice.tile, 'call-river-tile') : '';
+    callMarker = '<div class="call-river-marker" role="status" aria-label="' + action +
+      (notice.fromSeat ? ' ' + escapeCallNoticeText(callNoticeSeatName(notice.fromSeat)) + 'から' : '') + '">' +
+      '<strong>' + action + '</strong>' + source + calledTile + '</div>';
+  }
+  return '<div class="opp-river-area"><div class="opp-river">' + html + '</div>' + callMarker + '</div>';
 }
 
 function winnerBadgeHtml(seat) {

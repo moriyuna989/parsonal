@@ -260,6 +260,18 @@ function openLastReplay() {
     return '<div class="replay-call-notice" role="status" aria-live="polite"><span class="call-notice-label">鳴き</span> ' +
       escapeReplayText(message) + (notice.tile ? replayTile(notice.tile, frame, 'call-notice-tile') : '') + '</div>';
   }
+  function replayCallRiverMarkerHtml(seat, frame) {
+    var notice = frame.callNotice;
+    if (!notice || notice.callerSeat !== seat) return '';
+    var action = replayCallTypeLabel(notice);
+    var source = notice.fromSeat
+      ? '<span class="replay-call-river-source">← ' + seatLabel(notice.fromSeat) + '</span>'
+      : '';
+    var calledTile = notice.tile ? replayTile(notice.tile, frame, 'call-river-tile') : '';
+    return '<div class="replay-call-river-marker" role="status" aria-label="' + escapeReplayText(action) +
+      (notice.fromSeat ? ' ' + escapeReplayText(seatLabel(notice.fromSeat)) + 'から' : '') + '">' +
+      '<strong>' + escapeReplayText(action) + '</strong>' + source + calledTile + '</div>';
+  }
   function replayTile(code, frame, extraClass) {
     var isDora = (frame.dora || []).some(function (indicator) { return isSameTileType(code, nextTile(indicator)); });
     var classes = [];
@@ -294,7 +306,8 @@ function openLastReplay() {
       (frame.dealer === seat ? ' 親' : '') + (frame.riichi[seat] ? ' リーチ' : '') +
       (frame.turn === seat && !frame.gameOver ? ' 手番' : '') + ' · ' + score + '点</div>' +
       '<div class="replay-strip replay-hand-strip" aria-label="' + seatLabel(seat) + 'の手牌">' + handHtml + '</div>' + meldHtml +
-      '<div class="replay-river-label">捨て牌</div><div class="replay-strip replay-river" aria-label="' + seatLabel(seat) + 'の捨て牌">' + riverHtml + '</div></section>';
+      '<div class="replay-river-label">捨て牌</div><div class="replay-river-area"><div class="replay-strip replay-river" aria-label="' + seatLabel(seat) + 'の捨て牌">' + riverHtml + '</div>' +
+      replayCallRiverMarkerHtml(seat, frame) + '</div></section>';
   }
   function draw() {
     var item = frames[cursor];
