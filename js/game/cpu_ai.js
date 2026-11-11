@@ -418,6 +418,21 @@ function cpuThreatSeatsFor(seat) {
   });
 }
 
+// 暗槓だけは門前として扱い、ポン・チー・大明槓・加槓がある手は
+// リーチできない。古い状態で isOpen だけが残っている場合も、
+// 副露情報があればその内容を優先する。
+function cpuCanDeclareRiichi(seat) {
+  var player = G && G.players && G.players[seat];
+  if (!player) return false;
+  var melds = player.melds || [];
+  if (!melds.length) return !player.isOpen;
+  if (melds.some(function (meld) {
+    return meld && !(meld.concealed === true || (meld.type === 'kan' && meld.subType === 'ankan'));
+  })) return false;
+  return true;
+}
+window.cpuCanDeclareRiichi = cpuCanDeclareRiichi;
+
 function cpuSetHasTileType(set, tileCode) {
   if (!set || !tileCode) return false;
   if (set.has(tileCode)) return true;
@@ -684,11 +699,12 @@ function checkCpuTenpaiAndDiscard(hand, seat, level) {
   var uniqueTiles = Array.from(new Set(hand));
   var hardMode = !level || level === 'hard';
   if (!hardMode) {
+    var openMeldCount = G && G.players && G.players[seat] ? (G.players[seat].melds || []).length : 0;
     for (var i = 0; i < uniqueTiles.length; i++) {
       var firstTile = uniqueTiles[i];
       var firstCopy = hand.slice();
       firstCopy.splice(firstCopy.indexOf(firstTile), 1);
-      var firstWaits = findWaits(firstCopy);
+      var firstWaits = findWaitsOpen(firstCopy, openMeldCount);
       if (firstWaits.length > 0) return { canTenpai: true, discardTile: firstTile, waits: firstWaits };
     }
     return { canTenpai: false };
@@ -700,6 +716,7 @@ function checkCpuTenpaiAndDiscard(hand, seat, level) {
 }
 
 function evaluateCpuRiichiDecisionNakabayashi(seat, hand, tenpaiInfo) {
+  if (!cpuCanDeclareRiichi(seat)) return { shouldRiichi: false, discardTile: tenpaiInfo.discardTile };
   var p = G.players[seat];
   var candidate = tenpaiInfo.candidate || cpuBuildDiscardCandidates(seat, hand, { includeScore: true }).find(function (c) { return c.tile === tenpaiInfo.discardTile; });
   var waits = tenpaiInfo.waits || [];
@@ -718,6 +735,7 @@ function evaluateCpuRiichiDecisionNakabayashi(seat, hand, tenpaiInfo) {
 
 function evaluateCpuRiichiDecisionByLevel(seat, hand, tenpaiInfo, level) {
   level = level || 'hard';
+  if (!cpuCanDeclareRiichi(seat)) return { shouldRiichi: false, discardTile: tenpaiInfo.discardTile };
   if (level === 'easy') return { shouldRiichi: true, discardTile: tenpaiInfo.discardTile };
   if (level === 'normal') {
     var waits = tenpaiInfo.waits || [];

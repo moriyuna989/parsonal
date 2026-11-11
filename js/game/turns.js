@@ -205,7 +205,9 @@ function advancePracticeTurn(skipCpuDraw) {
   } else {
     var cpuLevel = (matchState && matchState.cpuLevel) || 'hard';
     var tenpaiInfo = checkCpuTenpaiAndDiscard(p.hand, seat, cpuLevel);
-    var riichiDecision = tenpaiInfo.canTenpai ? evaluateCpuRiichiDecisionByLevel(seat, p.hand, tenpaiInfo, cpuLevel) : { shouldRiichi: false };
+    var riichiDecision = tenpaiInfo.canTenpai && cpuCanDeclareRiichi(seat)
+      ? evaluateCpuRiichiDecisionByLevel(seat, p.hand, tenpaiInfo, cpuLevel)
+      : { shouldRiichi: false };
 
     if (tenpaiInfo.canTenpai && !p.riichi && riichiDecision.shouldRiichi) {
       p.riichi = true;
