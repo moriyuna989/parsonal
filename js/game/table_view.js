@@ -80,7 +80,47 @@ function wallVisualHtml() {
   var stacks = Math.ceil(remaining / 2);
   var html = '';
   for (var i = 0; i < stacks; i++) html += '<span class="wall-stack"></span>';
-  return '<div class="wall-row">' + html + '</div>';
+  return '<div class="wall-row">' + html + '</div>' + callNoticeHtml();
+}
+
+function callNoticeSeatName(seat) {
+  if (seat === 'you') return 'あなた';
+  if (typeof OnlineGame !== 'undefined' && OnlineGame.isOnline() && typeof OnlineGame.getSeatDisplayName === 'function') {
+    return OnlineGame.getSeatDisplayName(seat);
+  }
+  return SEAT_NAME[seat] || seat;
+}
+
+function callNoticeTypeLabel(notice) {
+  if (notice.type === 'chi') return 'チー';
+  if (notice.type === 'pon') return 'ポン';
+  if (notice.subType === 'minkan') return '大明槓';
+  if (notice.subType === 'ankan') return '暗槓';
+  if (notice.subType === 'kakan') return '加槓';
+  return 'カン';
+}
+
+function escapeCallNoticeText(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char];
+  });
+}
+
+function callNoticeHtml() {
+  var notice = G && G.callNotice;
+  if (!notice || notice.callerSeat === 'you') return '';
+  var caller = escapeCallNoticeText(callNoticeSeatName(notice.callerSeat));
+  var action = escapeCallNoticeText(callNoticeTypeLabel(notice));
+  var message;
+  if (notice.fromSeat === 'you') {
+    message = caller + 'があなたの捨て牌を' + action + 'しました';
+  } else if (notice.fromSeat) {
+    message = caller + 'が' + escapeCallNoticeText(callNoticeSeatName(notice.fromSeat)) + 'の捨て牌を' + action + 'しました';
+  } else {
+    message = caller + 'が' + action + 'しました';
+  }
+  var tile = notice.tile ? gameTileEl(notice.tile, 'call-notice-tile') : '';
+  return '<div class="call-notice" role="status" aria-live="polite"><span class="call-notice-label">鳴き</span> ' + message + tile + '</div>';
 }
 
 function centerInfoHtml() {

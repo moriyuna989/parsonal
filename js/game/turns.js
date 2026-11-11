@@ -169,6 +169,7 @@ function advancePracticeTurn(skipCpuDraw) {
             }
           }
           p.melds.push({ type: 'kan', subType: 'ankan', tiles: removedCpu, concealed: true });
+          setCallNotice({ type: 'kan', subType: 'ankan', callerSeat: seat, fromSeat: null, tile: kanCode }, true);
           G.log.push(SEAT_NAME[seat] + 'が' + tileName(kanCode) + 'を暗槓しました。');
           cancelAllIppatsu();
           openKanDora();

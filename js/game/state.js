@@ -239,7 +239,7 @@ function newGame() {
       replayDrawSeat: dealerSeat, replayDrawTile: firstDrawn,
       firstTurnUninterrupted: true, firstTsumoSeat: dealerSeat, firstTsumoAvailable: true, firstDrawWindowSeat: null,
       lastDrawWasLastLiveTile: false, lastDrawWasRinshan: false, lastDiscardWasLastLiveTile: false,
-      pendingCall: null, pendingCallIndex: null, pendingOpponentQueue: [], revealExpanded: false, lastDiscardSeat: null, lastTileClick: null,
+      pendingCall: null, pendingCallIndex: null, pendingOpponentQueue: [], callNotice: null, callNoticeTimer: null, callNoticeSyncOnClear: false, revealExpanded: false, lastDiscardSeat: null, lastTileClick: null,
       scoresSettled: false
     };
   }
@@ -367,7 +367,7 @@ function newGame() {
     replayDrawSeat: 'you', replayDrawTile: lastDrawn,
     firstTurnUninterrupted: false, firstTsumoSeat: null, firstTsumoAvailable: false, firstDrawWindowSeat: null,
     lastDrawWasLastLiveTile: false, lastDrawWasRinshan: false, lastDiscardWasLastLiveTile: false,
-    pendingCall: null, pendingCallIndex: null, pendingOpponentQueue: [], revealExpanded: false, lastDiscardSeat: null, lastTileClick: null
+    pendingCall: null, pendingCallIndex: null, pendingOpponentQueue: [], callNotice: null, callNoticeTimer: null, callNoticeSyncOnClear: false, revealExpanded: false, lastDiscardSeat: null, lastTileClick: null
   };
 }
 window.newGame = newGame;

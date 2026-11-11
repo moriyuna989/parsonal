@@ -88,6 +88,7 @@ function executeAnkanForSeat(seat, targetTile) {
     if (tileIndex(player.hand[i]) === targetIdx && removed.length < 4) removed.push(player.hand.splice(i, 1)[0]);
   }
   player.melds.push({ type: 'kan', subType: 'ankan', tiles: removed, concealed: true });
+  setCallNotice({ type: 'kan', subType: 'ankan', callerSeat: seat, fromSeat: null, tile: targetTile }, true);
   G.log.push((seat === 'you' ? 'あなたが' : OnlineGame.getSeatDisplayName(seat) + 'が') + tileName(targetTile) + 'を暗槓しました。');
   cancelAllIppatsu();
   openKanDora();
@@ -134,6 +135,7 @@ function executeKakanForSeat(seat, targetTile) {
     meld.subType = 'kakan';
     meld.tiles.push(tile);
     meld.kakanTile = tile;
+    setCallNotice({ type: 'kan', subType: 'kakan', callerSeat: seat, fromSeat: null, tile: tile }, true);
     G.log.push((seat === 'you' ? 'あなたが' : OnlineGame.getSeatDisplayName(seat) + 'が') + tileName(tile) + 'を加槓しました。');
     cancelAllIppatsu();
     openKanDora();

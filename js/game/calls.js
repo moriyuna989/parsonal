@@ -41,6 +41,74 @@ function totalKanCount() {
 }
 window.totalKanCount = totalKanCount;
 
+function serializeCallNotice(notice) {
+  if (!notice) return null;
+  return {
+    type: notice.type || null,
+    subType: notice.subType || null,
+    callerSeat: notice.callerSeat || null,
+    fromSeat: notice.fromSeat || null,
+    tile: notice.tile || null
+  };
+}
+window.serializeCallNotice = serializeCallNotice;
+
+function callNoticeKey(notice) {
+  if (!notice) return '';
+  return [notice.type, notice.subType || '', notice.callerSeat, notice.fromSeat || '', notice.tile || ''].join('|');
+}
+
+function clearCallNotice(shouldSync) {
+  if (!G) return;
+  if (G.callNoticeTimer) {
+    clearTimeout(G.callNoticeTimer);
+    G.callNoticeTimer = null;
+  }
+  if (!G.callNotice) return;
+  G.callNotice = null;
+  G.callNoticeSyncOnClear = false;
+  if (typeof render === 'function') render();
+  if (shouldSync && typeof OnlineGame !== 'undefined' && OnlineGame.isOnline() &&
+      typeof OnlinePeer !== 'undefined' && OnlinePeer.isHost() &&
+      typeof OnlineGame.syncOnlineStateToAll === 'function') {
+    OnlineGame.syncOnlineStateToAll();
+  }
+}
+window.clearCallNotice = clearCallNotice;
+
+function setCallNotice(notice, syncOnClear) {
+  if (!G || !notice || notice.callerSeat === 'you') return;
+  if (G.callNoticeTimer) clearTimeout(G.callNoticeTimer);
+  G.callNotice = serializeCallNotice(notice);
+  G.callNoticeSyncOnClear = !!syncOnClear;
+  var noticeSnapshot = G.callNotice;
+  G.callNoticeTimer = setTimeout(function () {
+    if (G && G.callNotice === noticeSnapshot) clearCallNotice(!!G.callNoticeSyncOnClear);
+  }, 2000);
+}
+window.setCallNotice = setCallNotice;
+
+function applySyncedCallNotice(notice) {
+  if (!G || notice === undefined) return;
+  var mapped = null;
+  if (notice) {
+    mapped = serializeCallNotice({
+      type: notice.type,
+      subType: notice.subType,
+      callerSeat: typeof logicalToLocalSeat === 'function' ? logicalToLocalSeat(notice.callerSeat) : notice.callerSeat,
+      fromSeat: notice.fromSeat ? (typeof logicalToLocalSeat === 'function' ? logicalToLocalSeat(notice.fromSeat) : notice.fromSeat) : null,
+      tile: notice.tile
+    });
+  }
+  if (callNoticeKey(G.callNotice) === callNoticeKey(mapped)) return;
+  if (!mapped || mapped.callerSeat === 'you') {
+    clearCallNotice(false);
+    return;
+  }
+  setCallNotice(mapped, false);
+}
+window.applySyncedCallNotice = applySyncedCallNotice;
+
 function isCpuCallResponder(seat) {
   if (!isPractice || !seat || seat === 'you') return false;
   var level = (matchState && matchState.cpuLevel) || 'hard';
@@ -218,6 +286,13 @@ function applyCallForSeat(seat, action, pending) {
   recordPaoResponsibility(seat, meld);
   player.melds.push(meld);
   player.isOpen = true;
+  setCallNotice({
+    type: meld.type === 'chi' ? 'chi' : meld.type === 'pon' ? 'pon' : 'kan',
+    subType: meld.subType || null,
+    callerSeat: seat,
+    fromSeat: fromSeat,
+    tile: tile
+  }, true);
   if (G.players[fromSeat] && G.players[fromSeat].river.length) G.players[fromSeat].river.pop();
   G.log.push((seat === 'you' ? 'あなたが' : (OnlineGame.getSeatDisplayName(seat) + 'が')) + tileName(tile) + 'を' + (action.type === 'chi' ? 'チー' : action.type === 'pon' ? 'ポン' : 'カン') + 'しました。');
   cancelAllIppatsu();

@@ -114,7 +114,8 @@ function syncOnlineStateToAll() {
         firstDrawWindowSeat: G.firstDrawWindowSeat,
         remainingPool: poolTotal(G.pool),
         scores: matchState ? matchState.scores : null,
-        riichiPool: matchState ? matchState.riichiPool : 0
+        riichiPool: matchState ? matchState.riichiPool : 0,
+        callNotice: typeof serializeCallNotice === 'function' ? serializeCallNotice(G.callNotice) : null
       });
     }
   });
@@ -135,6 +136,7 @@ function handleGuestSyncTurn(msg) {
   G.firstTsumoAvailable = !!msg.firstTsumoAvailable;
   G.firstDrawWindowSeat = msg.firstDrawWindowSeat ? logicalToLocalSeat(msg.firstDrawWindowSeat) : null;
   G.lastDiscardSeat = logicalToLocalSeat(msg.lastDiscardSeat);
+  if (typeof applySyncedCallNotice === 'function') applySyncedCallNotice(msg.callNotice);
 
   OnlineGameRuntime.SEATS_ORDER.forEach(function (locSeat) {
     var logSeat = localToLogicalSeat(locSeat);
@@ -190,7 +192,8 @@ function syncRoundOver() {
         replayRound: replayWorking && replayWorking.rounds.length ? replayWorking.rounds[replayWorking.rounds.length - 1] : null,
         replayFinished: checkKyokuResultStatus().isFinished,
         scores: matchState ? matchState.scores : null,
-        riichiPool: matchState ? matchState.riichiPool : 0
+        riichiPool: matchState ? matchState.riichiPool : 0,
+        callNotice: typeof serializeCallNotice === 'function' ? serializeCallNotice(G.callNotice) : null
       });
     }
   });

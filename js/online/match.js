@@ -125,7 +125,10 @@ function handleGuestStartMatch(msg) {
     gameOver: false,
     outcome: null,
     justDrew: (localCurrentTurn === 'you'),
-    lastDrawn: msg.lastDrawn || null
+    lastDrawn: msg.lastDrawn || null,
+    callNotice: null,
+    callNoticeTimer: null,
+    callNoticeSyncOnClear: false
   };
 
   render();

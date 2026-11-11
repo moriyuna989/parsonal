@@ -212,6 +212,7 @@ function handleGuestRoundOver(msg) {
   if (msg.doraIndicators) G.doraIndicators = msg.doraIndicators.slice();
   if (msg.uraIndicators) G.uraIndicators = msg.uraIndicators.slice();
   if (msg.replayRound) receiveReplayRound(msg.replayRound, !!msg.replayFinished);
+  if (typeof applySyncedCallNotice === 'function') applySyncedCallNotice(msg.callNotice);
   G.processing = false;
   render();
 }

@@ -40,6 +40,7 @@ function captureReplaySnapshot(eventText) {
     hands: {}, rivers: {}, melds: {}, riichi: {}, riichiTurns: {}, winds: {},
     drawSeat: G.replayDrawSeat || null,
     drawTile: G.replayDrawTile || null,
+    callNotice: typeof serializeCallNotice === 'function' ? serializeCallNotice(G.callNotice) : null,
     gameOver: !!G.gameOver,
     outcome: G.outcome ? { type: G.outcome.type, tile: G.outcome.tile || null,
       winner: G.outcome.type === 'user_ron' || G.outcome.type === 'user_tsumo' ? 'you' :
@@ -236,6 +237,29 @@ function openLastReplay() {
     if (seat === replay.viewerSeat) return 'あなた';
     return escapeReplayText((replay.names || {})[seat] || SEAT_NAME[seat] || seat);
   }
+  function replayCallTypeLabel(notice) {
+    if (notice.type === 'chi') return 'チー';
+    if (notice.type === 'pon') return 'ポン';
+    if (notice.subType === 'minkan') return '大明槓';
+    if (notice.subType === 'ankan') return '暗槓';
+    if (notice.subType === 'kakan') return '加槓';
+    return 'カン';
+  }
+  function replayCallNoticeHtml(frame) {
+    var notice = frame.callNotice;
+    if (!notice || notice.callerSeat === replay.viewerSeat) return '';
+    var action = replayCallTypeLabel(notice);
+    var message;
+    if (notice.fromSeat === replay.viewerSeat) {
+      message = seatLabel(notice.callerSeat) + 'があなたの捨て牌を' + action + 'しました';
+    } else if (notice.fromSeat) {
+      message = seatLabel(notice.callerSeat) + 'が' + seatLabel(notice.fromSeat) + 'の捨て牌を' + action + 'しました';
+    } else {
+      message = seatLabel(notice.callerSeat) + 'が' + action + 'しました';
+    }
+    return '<div class="replay-call-notice" role="status" aria-live="polite"><span class="call-notice-label">鳴き</span> ' +
+      escapeReplayText(message) + (notice.tile ? replayTile(notice.tile, frame, 'call-notice-tile') : '') + '</div>';
+  }
   function replayTile(code, frame, extraClass) {
     var isDora = (frame.dora || []).some(function (indicator) { return isSameTileType(code, nextTile(indicator)); });
     var classes = [];
@@ -284,7 +308,7 @@ function openLastReplay() {
         (frame.outcome.winner ? ' · ' + seatLabel(frame.outcome.winner) : '') +
         (frame.outcome.tile ? ' · ' + tileEl(frame.outcome.tile) : '') + '</div>' : '';
     var doraHtml = (frame.dora || []).map(function (tile) { return tileEl(tile); }).join('');
-    var centerEvent = '<div class="replay-center-event">' + escapeReplayText(frame.event) + '</div>' + outcomeHtml;
+    var centerEvent = replayCallNoticeHtml(frame) + '<div class="replay-center-event">' + escapeReplayText(frame.event) + '</div>' + outcomeHtml;
     var root = document.getElementById('replayRoot');
     root.innerHTML = '<div class="replay-layout">' +
       '<div class="replay-toolbar"><select id="replayRoundSelect" aria-label="局を選択">' + roundOptions + '</select>' +
